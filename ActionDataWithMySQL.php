@@ -255,7 +255,7 @@ select[type='text'] { font-size: 18px; text-align: center;}
                         <td align=\"center\" colspan=\"3\">
                           <table width=\"100%\" border=\"0\">
                             <tr>
-                                <td align=\"center\">Temperature Sensor Booger Name:
+                                <td align=\"center\">Temperature Sensor Name:
                                     <select type=\"text\" name=\"tempAddress\">
                                       <option selected value=\"".$tempAddrQueryObj->name."\">".$tempAddrQueryObj->name."</option>
                                       <option value=\"UNASSIGNED\">UNASSIGNED</option>
@@ -269,7 +269,7 @@ select[type='text'] { font-size: 18px; text-align: center;}
               }else{
                 echo "<tr>
                         <td align=\"center\" colspan=\"3\">";
-                 echo"  Temperature Sensor Boogie-Woogie Name:
+                 echo"  Temperature Sensor Name:
                             <select type=\"text\" name=\"tempAddress\">
                               <option value=\"UNASSIGNED\">UNASSIGNED</option>
                               ".$tempOptionStr."

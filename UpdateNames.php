@@ -17,10 +17,12 @@
       include_once("makeASocket.php");
       include_once("accessDatabase.php");
       include_once("header.html");
-      $h2Header = "<font color=\"blue\">Update Names</font>"; 
+      $h2Header = "<font color=\"blue\">Update Names</font>";
+      $tempAddrStr = "";
+      $switchAddrStr = ""; 
     ?> 
 <!-- Table for Main Body -->
-    <table width="100%" border="0" cellspacing="0" cellpadding="2">
+    <table width="100%" border="2" cellspacing="0" cellpadding="2">
       <tr>
         <td>
           <?php 
@@ -51,12 +53,12 @@
               </td>
             </tr>
             <tr>
-              <td align=\"center\" colspan=\"2\">
+              <td align=\"center\" colspan=\"2\" border=\"2\">
                 <h2>".$h2Header."</h2>
               </td>
               </tr>
               <tr>
-                <td>";
+                <td align=\"center\">";
             
             $newSocket = makeASocket($service_port, $address);
             $in = "$getChipCount\n";
@@ -81,10 +83,6 @@
                         <br /> 
                         <input type=\"submit\" value=\"SUBMIT\">
                       </td>
-                    </tr>
-                    <tr>
-                      <td align=\"center\"><font size=\"5\"><strong>Address</strong></font></td>
-                      <td align=\"center\"><font size=\"5\"><strong>Name</strong></font></td>
                     </tr>";
               for($scCnt=0; $scCnt < $maxChipCnt; $scCnt++)
               {
@@ -110,7 +108,9 @@
                 }else{
                   $chipName = "";
                 }
-                echo "  <tr>
+                if($chipAddressArray[0] == "0x28")
+                {
+                  $tempAddrStr .=  "  <tr>
                           <td align=\"center\">
                             ".$chipArray[0]."
                             <input type=\"hidden\" name=\"address".$scCnt."\" value=\"".$chipArray[0]."\">
@@ -119,7 +119,52 @@
                             <input type=\"text\" size=\"25\" name=\"name".$scCnt."\" value=\"".$chipName."\">
                           </td>
                         </tr>";
-               }
+                }elseif($chipAddressArray[0] == "0x12"){
+                  $switchAddrStr .=  "  <tr>
+                          <td align=\"center\">
+                            ".$chipArray[0]."
+                            <input type=\"hidden\" name=\"address".$scCnt."\" value=\"".$chipArray[0]."\">
+                          </td>
+                          <td align=\"center\">
+                            <input type=\"text\" size=\"25\" name=\"name".$scCnt."\" value=\"".$chipName."\">
+                          </td>
+                        </tr>";
+                }
+              }
+             echo "<tr>
+                     <td>
+                       <table>
+                         <tr>";
+             if($tempAddrStr != "")
+             {            
+                echo"           <td>
+                             <table border=\"2\">
+                              <tr>
+                                <td align=\"center\"><font size=\"5\"><strong>Temperature Address</strong></font></td>
+                                <td align=\"center\"><font size=\"5\"><strong>Name</strong></font></td>
+                              </tr>
+                                 ".$tempAddrStr."
+                             </table>  
+                           </td>";
+              }
+              if($switchAddrStr != "")
+              {            
+                echo"      <td>
+                             <table border=\"2\">
+                              <tr>
+                                <td align=\"center\"><font size=\"5\"><strong>Switch Address</strong></font></td>
+                                <td align=\"center\"><font size=\"5\"><strong>Name</strong></font></td>
+                              </tr>
+                               ".$switchAddrStr."
+                             </table>
+                           </td>";
+              }
+                 echo"   </tr>
+                       </table>
+                     </td>
+                   </tr/>
+                   ";
+                     
              echo "     <tr>
                           <td colspan=\"2\"align=\"center\">
                             <font size=\"5\"><strong>
@@ -131,8 +176,15 @@
                         </tr>
                       </table>
                     </form";
-           include ("menu.html");
            mysqli_close($link);
+          ?>
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <br />
+          <?php
+            include ("menu.html");
           ?>
         </td>
       </tr>
