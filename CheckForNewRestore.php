@@ -23,7 +23,7 @@
     include_once("header.html"); 
   ?> 
 <!-- Table for Main Body -->
-    <table width="100%" border="0" cellspacing="0" cellpadding="2">
+    <table width="100%" border="2" cellspacing="0" cellpadding="2">
       <tr>
         <td>
           <?php 
@@ -43,7 +43,7 @@
         <td  align="center" colspan="6">
           <table width="100%" border="1" cellspacing="0" cellpadding="2">
             <tr>
-              <td align="center" border="2" colspan="6">
+              <td align="center" colspan="6">
                 <h2>Check For New Chips / Restore All Action Settings</h2>
               </td>
             </tr>
@@ -51,7 +51,7 @@
               <td>
                 <table width="100%" border="1" cellspacing="0" cellpadding="2">
                   <tr>
-                    <td align="center" border="2" width="50%">
+                    <td align="center" width="50%">
                       <font color="red">
                         USE THIS BUTTON WITH EXTREME CARE!!
                         <br />
@@ -67,7 +67,7 @@
                         <br />              
                       </font>      
                     </td>
-                    <td align="center" border="2">
+                    <td align="center">
                       <form method="post" action="ActionStatus.php">
                         <input type="hidden" name="restoreall" value="restoreall">
                         <input type="submit" value="RESTORE ALL">
@@ -80,6 +80,35 @@
           </table>      
         </td>
       </tr>  
+      <tr>
+        <td align="center" colspan="6">
+          <?php
+            if($_POST["dbclear"] === "dbclear")
+            {
+              $dbClearStr = "UPDATE `action` SET `active`='0', `tempAddr`='0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00', `tcAddr`='0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00', `tcTrigger`='-255', `tcDelay`='0', `thAddr`='0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00', `thTrigger`='255', `thDelay`='0' WHERE 1";
+              $result = mysqli_query($link, $dbClearStr);
+              $dbClearStr = "UPDATE `chipNames` SET `address`='0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00',`name`='UNASSIGNED' WHERE 1";
+              $result = mysqli_query($link, $dbClearStr);
+            }
+          ?>
+          <font color="red">
+            USE THIS BUTTON WITH EXTREME CARE!!
+            <br />              
+            USING THIS BUTTON RESETS ALL DATABASE VALUES!!
+            <br />
+          </font>
+          <form method="post" action="CheckForNewRestore.php">
+            <input type="hidden" name="dbclear" value="dbclear">
+            <input type="submit" value="RESET DATABASE VALUES">
+          </form>
+          <font color="red">
+            USING THIS BUTTON RESETS ALL DATABASE VALUES!!
+            <br />
+            USE THIS BUTTON WITH EXTREME CARE!!
+            <br />
+          </font>              
+        </td>
+      </tr>
       <tr>
         <td>
           <div id="container">

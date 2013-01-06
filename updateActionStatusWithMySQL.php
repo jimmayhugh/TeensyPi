@@ -2,6 +2,9 @@
 
   include_once("makeASocket.php");
   include_once("accessDatabase.php");
+  $temperatureName = "";
+  $thName = "";
+  $tcName = "";
 
   if($_POST["masterStop"] === "masterStop")
   {
@@ -85,20 +88,49 @@
     $trimStr3 = trim($chipXArray[3]);
     $trimStr4 = trim($chipXArray[4]);
     $trimStr5 = trim($chipXArray[5]);
-    $query = "select tempName,tcName,thName from action where id=".$x;
+    
+    $query = "select * from action where id=".$x;
     $result = mysqli_query($link,$query);
-    if(mysqli_num_rows($result) > 0)
+    if($result != NULL && mysqli_num_rows($result) > 0)
     {
-      mysqli_field_seek($result, 0);
-      $finfo = mysqli_fetch_object($result);
-      $temperatureName = $finfo->tempName;
-      if($temperatureName == ""){$temperatureName = "Temp Sensor ".$x;}
-      $tcName = $finfo->tcName;
-      if($tcName == ""){$tcName = "Cold Switch ".$x;}
-      $thName = $finfo->thName;
-      if($thName == ""){$thName = "Hot Switch ".$x;}    
+      $finfo = mysqli_fetch_row($result);
+      $temperatureAddress = $finfo[2];
+      $tooHotAddress = $finfo[6];
+      $tooColdAddress = $finfo[3];
+//      $bodyStr .= "<br />action = ".$x."&nbsp;&nbsp;&nbsp;".$temperatureAddress."&nbsp;&nbsp;&nbsp;".$tooHotAddress."&nbsp;&nbsp;&nbsp;".$tooColdAddress."<br />";
       mysqli_free_result($result);
     }
+    
+    $query = "select * from chipNames where address='".$temperatureAddress."'";
+    $result = mysqli_query($link,$query);
+    if($result != NULL && mysqli_num_rows($result) > 0)
+    {
+      $finfo = mysqli_fetch_row($result);
+      $temperatureName = $finfo[2];
+      mysqli_free_result($result);
+    }
+    if($temperatureName == ""){$temperatureName = "Temp Sensor ".$x;}
+    
+    $query = "select * from chipNames where address='".$tooHotAddress."'";
+    $result = mysqli_query($link,$query);
+    if($result != NULL && mysqli_num_rows($result) > 0)
+    {
+      $finfo = mysqli_fetch_row($result);
+      $thName = $finfo[2];
+      mysqli_free_result($result);
+    }
+    if($thName == ""){$thName = "Hot Switch ".$x;}
+
+    $query = "select * from chipNames where address='".$tooColdAddress."'";
+    $result = mysqli_query($link,$query);
+    if($result != NULL && mysqli_num_rows($result) > 0)
+    {
+      $finfo = mysqli_fetch_row($result);
+      $tcName = $finfo[2];
+      mysqli_free_result($result);
+    }
+    if($tcName == ""){$tcName = "Cold Switch ".$x;}
+
     $bodyStr.= 
     "<div id=\"action".$x."\">
       <td valign=\"top\" align=\"center\">
@@ -121,15 +153,6 @@
            <input type=\"hidden\" name=\"actionCnt\" value=\"".$x."\">
            <input type=\"submit\" value=\"ASSIGN\">
          </form>";
-  if(trim($eepromStatus) == "FALSE")
-  {
-    $bodyStr .= 
-         "<form method=\"post\" action=\"ActionDataWithMySQL.php\">
-           <input type=\"hidden\" name=\"restore\" value=\"restore\">
-           <input type=\"hidden\" name=\"actionCnt\" value=\"".$x."\">
-           <input type=\"submit\" value=\"RESTORE\">
-         </form>";
-   }
     $bodyStr .= 
        "</td>
      </tr>

@@ -17,24 +17,15 @@
 </script>
 </head>
 <body>
-<?php 
-  if($_POST["checknew"] === "checknew")
-  {
-    include_once("makeASocket.php");
-    $newSocket = makeASocket($service_port, $address);
-    $in = $getNewSensors."\n";
-    socket_write($newSocket, $in, strlen($in));
-    $eepromStatus = socket_read($newSocket, $socBufSize);
-    socket_close($newSocket);
-  }
-include ("header.html"); 
+<?php
+  include("header.html");
 ?> 
 <!-- Table for Main Body -->
 <table width="100%" border="0" cellspacing="0" cellpadding="2">
   <tr>
     <td>
     <?php 
-    include ("menu.html");
+      include ("menu.html");
     ?>
     </td>
   </tr>
@@ -52,7 +43,7 @@ include ("header.html");
   <tr>
     <td>
       <div id="container">
-        <?php 
+        <?php
           include ("updateStatus.php"); 
         ?>
       </div>
