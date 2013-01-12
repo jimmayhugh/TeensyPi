@@ -8,6 +8,14 @@
   General Setup
 */
 
+// define DEBUG options
+// #define __SERIAL_DEBUG__
+// #define __SERIAL1_DEBUG__
+// #define __CHIP_DEBUG__
+// #define __EEPROM_DEBUG__
+// #define __ALL_DEBUG__
+
+
 // define serial commands
 
 const uint8_t getMaxChips        = '1';
@@ -182,34 +190,55 @@ void setup()
   digitalWrite(waitPin, LOW);
   digitalWrite(waitLED, LOW);
   Serial.begin(baudRate);
-//  delay(3000);
+  
+  #if defined (__SERIAL_DEBUG__) || defined (__SERIAL1_DEBUG__) || defined (__CHIP_DEBUG__) ||defined (__EEPROM_DEBUG__) || defined (__ALL_DEBUG__)
+ 
+    delay(3000);
+  #endif
+  
   Serial.print(F("Serial Debug running at "));
   Serial.print(baudRate);
   Serial.println(F(" baud"));
 
 
   eeResult = EEPROM.read(EEPROMidAddr);
-  // Serial.print(F("eeResult = 0x"));
-  // Serial.println(eeResult, HEX);
+  
+  #if defined (__EEPROM_DEBUG__) || defined (__ALL_DEBUG__)
+   Serial.print(F("eeResult = 0x"));
+   Serial.println(eeResult, HEX);
+  #endif
+  
   if(eeResult != 0x55)
   {
-    // Serial.println(F("No EEPROM Data"));
+  #if defined (__EEPROM_DEBUG__ )|| defined (__ALL_DEBUG__)
+     Serial.println(F("No EEPROM Data"));
+  #endif
+  
     eepromReady = FALSE;
     findChips();
   }else{
-    // Serial.println(F("Getting EEPROM Data"));
+
+  #if defined (__EEPROM_DEBUG__) || defined (__ALL_DEBUG__)
+     Serial.println(F("Getting EEPROM Data"));
+  #endif
+
     chipCnt = EEPROM.read(EEPROMccAddr);
     EEPROM_readAnything(EEPROMchipAddr, chip); // get chip structures from EEPROM
     EEPROM_readAnything(EEPROMactionAddr, action); // get action structures from EEPROM
-    // Serial.println(F("EEPROM Data Read Completed"));
+
+  #if defined (__EEPROM_DEBUG__) || defined (__ALL_DEBUG__)
+     Serial.println(F("EEPROM Data Read Completed"));
+  #endif
+  
     eepromReady = TRUE;
   }
   
-  // Serial.print(sizeof(chipStruct) / sizeof(byte));
-  // Serial.println(F(" bytes in chip structure"));
-  // Serial.print(sizeof(chipActionStruct) / sizeof(byte));
-  // Serial.println(F(" bytes in action structure"));
-  
+  #if defined (__EEPROM_DEBUG__) || defined (__ALL_DEBUG__)
+   Serial.print(sizeof(chipStruct) / sizeof(byte));
+   Serial.println(F(" bytes in chip structure"));
+   Serial.print(sizeof(chipActionStruct) / sizeof(byte));
+   Serial.println(F(" bytes in action structure"));
+  #endif  
 
 
   Serial1.begin(baudRate);
@@ -239,15 +268,21 @@ void loop()
          serialMessageReady = TRUE;
        }
        softSerialBuffer[cnt] = c;
-//       Serial.write(c);
+  #if defined (__SERIAL_DEBUG__) || defined (__ALL_DEBUG__)
+       Serial.write(c);
+  #endif
        cnt++;
-//       delay(2);
+  #if defined (__SERIAL_DEBUG__) || defined (__ALL_DEBUG__)
+       delay(2);
+  #endif
      }
    }
   
   if(cnt > 0 && serialMessageReady == TRUE)
   {
-//    Serial.println();
+  #if defined (__SERIAL_DEBUG__) || defined (__ALL_DEBUG__)
+    Serial.println();
+  #endif
     softSerialProcess();
   }
   
@@ -286,7 +321,8 @@ void findChips()
   while (ds.search(chip[cntx].chipAddr))
   {
 
-/*    
+  #if defined (__CHIP_DEBUG__) || defined (__ALL_DEBUG__)
+    
      Serial.print(F("Chip "));
      Serial.print(cntx);
      Serial.print(F(" = {"));
@@ -303,20 +339,22 @@ void findChips()
       if(i < 7){Serial.print(F(","));}
     }
     Serial.println(F("}"));
-*/    
+  #endif    
     cntx++;
     delay(750);
   }
-/*
-  Serial.print(cntx);
-  Serial.print(F(" Sensor"));
-  if(cntx == 1)
-  {
-    Serial.println(F(" Detected"));
-  }else{
-     Serial.println(F("s Detected"));
-  }
-*/  
+
+  #if defined (__CHIP_DEBUG__) || defined (__ALL_DEBUG__)
+    Serial.print(cntx);
+    Serial.print(F(" Sensor"));
+    if(cntx == 1)
+    {
+      Serial.println(F(" Detected"));
+    }else{
+       Serial.println(F("s Detected"));
+    }
+  #endif
+  
   ds.reset_search();
   chipCnt = cntx;
   if(cntx < maxChips)
@@ -543,27 +581,32 @@ void softSerialProcess()
           case 0: // action
           {
             actionArray = atoi(result);
-            // Serial.print(F("actionArray = "));
-            // Serial.println(actionArray);
+  #if defined (__SERIAL1_DEBUG__) || defined (__ALL_DEBUG__)
+             Serial.print(F("actionArray = "));
+             Serial.println(actionArray);
+  #endif
             break;
           }
           case 1:
           {
             actionSection = atoi(result);
-            // Serial.print(F("actionSection = "));
-            // Serial.println(actionSection);
+  #if defined (__SERIAL1_DEBUG__) || defined (__ALL_DEBUG__)
+             Serial.print(F("actionSection = "));
+             Serial.println(actionSection);
+  #endif
             break;
           }
           
           case 2:
           {
             actionEnableTemp = atoi(result);
-            // Serial.print(F("actionEnableTemp = "));
-            // Serial.println(actionEnableTemp);
-            // Serial.print(F("action["));
-            // Serial.print(actionArray);
-            // Serial.print(F("]"));
-            
+  #if defined (__SERIAL1_DEBUG__) || defined (__ALL_DEBUG__)
+             Serial.print(F("actionEnableTemp = "));
+             Serial.println(actionEnableTemp);
+             Serial.print(F("action["));
+             Serial.print(actionArray);
+             Serial.print(F("]"));
+  #endif            
             switch (actionSection)
             {
               case 1:
@@ -571,15 +614,21 @@ void softSerialProcess()
                 if(actionEnableTemp == 1)
                 {
                   action[actionArray].actionEnabled = TRUE;
-                  // Serial.println(F(".actionEnabled is Enabled"));
+  #if defined (__SERIAL1_DEBUG__) || defined (__ALL_DEBUG__)
+                   Serial.println(F(".actionEnabled is Enabled"));
+  #endif
                 }else{
                   action[actionArray].actionEnabled = FALSE;
-                  // Serial.println(F(".actionEnabled is Disabled"));
+  #if defined (__SERIAL1_DEBUG__) || defined (__ALL_DEBUG__)
+                 // Serial.println(F(".actionEnabled is Disabled"));
+  #endif
                 }
-                // Serial.print(F("action["));
-                // Serial.print(actionArray);
-                // Serial.print(F("].actionEnabled = "));
-                // Serial.println(action[actionArray].actionEnabled);
+  #if defined (__SERIAL1_DEBUG__) || defined (__ALL_DEBUG__)
+                 Serial.print(F("action["));
+                 Serial.print(actionArray);
+                 Serial.print(F("].actionEnabled = "));
+                 Serial.println(action[actionArray].actionEnabled);
+  #endif
                 break;
               }
               
@@ -589,12 +638,16 @@ void softSerialProcess()
                 if(actionSection == 2)
                 {
                   action[actionArray].tooCold = actionEnableTemp;
-                  // Serial.print(F(".tooCold is set to "));
-                  // Serial.println(actionEnableTemp);
+  #if defined (__SERIAL1_DEBUG__) || defined (__ALL_DEBUG__)
+                  Serial.print(F(".tooCold is set to "));
+                  Serial.println(actionEnableTemp);
+  #endif
                 }else if( actionSection == 3){
                   action[actionArray].tooHot = actionEnableTemp;
-                  // Serial.print(F(".tooHot is set to "));
-                  // Serial.println(actionEnableTemp);
+  #if defined (__SERIAL1_DEBUG__) || defined (__ALL_DEBUG__)
+                   Serial.print(F(".tooHot is set to "));
+                   Serial.println(actionEnableTemp);
+  #endif
                 }
                 break;
               }
@@ -606,17 +659,23 @@ void softSerialProcess()
           {
             if(actionSection != 1)
             {
-              // Serial.print(F("result = "));
-              // Serial.println(result);
+  #if defined (__SERIAL1_DEBUG__) || defined (__ALL_DEBUG__)
+               Serial.print(F("result = "));
+               Serial.println(result);
+  #endif
               actionDelayVal = ((uint32_t) atoi(result));
-              // Serial.print(F("actionDelayVal = "));
-              // Serial.println(actionDelayVal);
+  #if defined (__SERIAL1_DEBUG__) || defined (__ALL_DEBUG__)
+               Serial.print(F("actionDelayVal = "));
+               Serial.println(actionDelayVal);
+  #endif
               actionDelayVal *= 1000;
-              // Serial.print(F("actionDelayVal * 1000 = "));
-              // Serial.println(actionDelayVal);
-              // Serial.print(F("action["));
-              // Serial.print(actionArray);
-              // Serial.print(F("]."));
+  #if defined (__SERIAL1_DEBUG__) || defined (__ALL_DEBUG__)
+               Serial.print(F("actionDelayVal * 1000 = "));
+               Serial.println(actionDelayVal);
+               Serial.print(F("action["));
+               Serial.print(actionArray);
+               Serial.print(F("]."));
+  #endif
               if(actionSection == 2)
               {
                 action[actionArray].tcDelay = actionDelayVal;
@@ -624,16 +683,20 @@ void softSerialProcess()
                 {
                   action[actionArray].tcMillis = millis();
                 }
-                // Serial.print(F("tcDelay = "));
-                // Serial.println((actionDelayVal / 1000));
+  #if defined (__SERIAL1_DEBUG__) || defined (__ALL_DEBUG__)
+                 Serial.print(F("tcDelay = "));
+                 Serial.println((actionDelayVal / 1000));
+  #endif
               }else if (actionSection == 3){
                 action[actionArray].thDelay = actionDelayVal;
                 if(actionDelayVal > 0)
                 {
                   action[actionArray].thMillis = millis();
                 }
-                // Serial.print(F("thDelay = "));
-                // Serial.println(actionDelayVal / 1000);
+  #if defined (__SERIAL1_DEBUG__) || defined (__ALL_DEBUG__)
+                 Serial.print(F("thDelay = "));
+                 Serial.println(actionDelayVal / 1000);
+  #endif
               }
             }
             break;
@@ -641,13 +704,17 @@ void softSerialProcess()
           
           case 4:
           {
-            // Serial.println(result);
+  #if defined (__SERIAL1_DEBUG__) || defined (__ALL_DEBUG__)
+             Serial.println(result);
+  #endif
             addrResult = strtok( result, addrDelim );
             while(addrResult != NULL)
             {
               addrVal[addrResultCnt] = (uint8_t) strtol(addrResult, NULL, 16);
-              // Serial.print(F(" "));
-              // Serial.print(addrVal[addrResultCnt], HEX);
+  #if defined (__SERIAL1_DEBUG__) || defined (__ALL_DEBUG__)
+               Serial.print(F(" "));
+               Serial.print(addrVal[addrResultCnt], HEX);
+  #endif
               addrResultCnt++;
               addrResult = strtok( NULL, addrDelim );
             }
@@ -657,23 +724,30 @@ void softSerialProcess()
               {
                 addrMatchCnt = 0;
                 chipAddrCnt++;
-                // Serial.print(F("chipAddrCnt = "));
-                // Serial.println(chipAddrCnt);
-                // Serial.print(F("chipCnt = "));
-                // Serial.println(chipCnt);
+  #if defined (__SERIAL1_DEBUG__) || defined (__ALL_DEBUG__)
+                 Serial.print(F("chipAddrCnt = "));
+                 Serial.println(chipAddrCnt);
+                 Serial.print(F("chipCnt = "));
+                 Serial.println(chipCnt);
+  #endif
                 continue;
               }
             }
             if(chipAddrCnt <= chipCnt)
             {
-              // Serial.print(F("MATCH!! - "));
+  #if defined (__SERIAL1_DEBUG__) || defined (__ALL_DEBUG__)
+               Serial.print(F("MATCH!! - "));
+  #endif
               actionPtrMatch = TRUE;
             }else{
-              // Serial.print(F("NO MATCH!! - "));
+  #if defined (__SERIAL1_DEBUG__) || defined (__ALL_DEBUG__)
+               Serial.print(F("NO MATCH!! - "));
+  #endif
               actionPtrMatch = FALSE;
             }
-            // Serial.println(chipAddrCnt);
-
+  #if defined (__SERIAL1_DEBUG__) || defined (__ALL_DEBUG__)
+             Serial.println(chipAddrCnt);
+  #endif
             switch (actionSection)
             {
               case 1:
@@ -707,9 +781,10 @@ void softSerialProcess()
                 break;
               }
             }
-//              Serial.print(addrVal, HEX);
-//              Serial.print(F(", "));
-
+  #if defined (__SERIAL1_DEBUG__) || defined (__ALL_DEBUG__)
+              //Serial.print(addrVal, HEX);
+              Serial.print(F(", "));
+  #endif
             break;
           }
           break;
@@ -733,8 +808,10 @@ void softSerialProcess()
 
     case setActionSwitch: // "E"
     {
-      // Serial.println(F("case: setActionSwitch"));
-      // Serial.println(softSerialBuffer);
+  #if defined (__SERIAL1_DEBUG__) || defined (__ALL_DEBUG__)
+       Serial.println(F("case: setActionSwitch"));
+       Serial.println(softSerialBuffer);
+  #endif
       actionSelected = atoi((char *) &softSerialBuffer[1]);
       if(actionSelected >= 10)
       {
@@ -754,7 +831,9 @@ void softSerialProcess()
       {
         case tooColdSwitch:
         {
-          // Serial.println(F("Setting too Cold Switch"));
+  #if defined (__SERIAL1_DEBUG__) || defined (__ALL_DEBUG__)
+           Serial.println(F("Setting too Cold Switch"));
+  #endif
           actionSwitchSet((uint8_t *) action[actionSelected].tcPtr->chipAddr, setChipState);
           if(setChipState == ds2406PIOAoff && action[actionSelected].tcDelay > 0)
           {
@@ -766,7 +845,9 @@ void softSerialProcess()
         
         case tooHotSwitch:
         {
-          // Serial.println(F("Setting too Hot Switch"));
+  #if defined (__SERIAL1_DEBUG__) || defined (__ALL_DEBUG__)
+           Serial.println(F("Setting too Hot Switch"));
+  #endif
           actionSwitchSet((uint8_t *) action[actionSelected].thPtr->chipAddr, setChipState);
           if(setChipState == ds2406PIOAoff && action[actionSelected].thDelay > 0)
           {
@@ -778,7 +859,9 @@ void softSerialProcess()
         
         default:
         {
-          // Serial.println(F("ButtFucker"));
+  #if defined (__SERIAL1_DEBUG__) || defined (__ALL_DEBUG__)
+           Serial.println(F("Houston, We HAve A Switch Problem"));
+  #endif        
           break;
         }
       }
@@ -863,20 +946,31 @@ void initEEPROM(void)
   }
 */
   // Serial.println(F("EEPROM Space Cleared"));
-  // Serial.println(F("Writing EEPROM Data"));
+  #if defined (__EEPROM_DEBUG__) || defined (__ALL_DEBUG__)
+   Serial.println(F("Writing EEPROM Data"));
+  #endif
+
   EEPROM.write(EEPROMccAddr, chipCnt);
   EEPROM.write(EEPROMidAddr, EEPROMidVal);
   eeResult = EEPROM_writeAnything(EEPROMchipAddr, chip);
-  // Serial.print(eeResult);
-  // Serial.println(F(" bytes written to chip EEPROM"));
+
+  #if defined (__EEPROM_DEBUG__) || defined (__ALL_DEBUG__)
+   Serial.print(eeResult);
+   Serial.println(F(" bytes written to chip EEPROM"));
+  #endif
   eeResult = EEPROM_writeAnything(EEPROMactionAddr, action);
-  // Serial.print(eeResult);
-  // Serial.println(F(" bytes written to action EEPROM"));
-  // Serial.println(F("EEPROM Data Write Completed"));
+
+  #if defined (__EEPROM_DEBUG__) || defined (__ALL_DEBUG__)
+   Serial.print(eeResult);
+   Serial.println(F(" bytes written to action EEPROM"));
+   Serial.println(F("EEPROM Data Write Completed"));
+  #endif
   eeResult = EEPROM.read(EEPROMidAddr);
-  // Serial.print(F("EEPROMidAddr = 0x"));
-  // Serial.println(eeResult);
-  /*
+
+  #if defined (__EEPROM_DEBUG__) || defined (__ALL_DEBUG__)
+   Serial.print(F("EEPROMidAddr = 0x"));
+   Serial.println(eeResult);
+ 
   for(y = 0, address = EEPROMchipAddr ;  y < maxChips; y++)
   {
     // read a byte from the current address of the EEPROM
@@ -918,7 +1012,7 @@ void initEEPROM(void)
     }
     Serial.println();
   }
-  */
+  #endif
   digitalWrite(waitPin, HIGH);
   digitalWrite(waitLED, HIGH);
   eepromReady = TRUE;
@@ -968,28 +1062,48 @@ void getAllActionStatus(void)
 void actionSwitchSet(uint8_t* array, uint8_t setChipState)
 {
    uint8_t addrMatchCnt, chipAddrCnt;
-  // Serial.println(F("actionSwitchSet"));
+  #if defined (__SERIAL1_DEBUG__) || defined (__ALL_DEBUG__)
+   Serial.println(F("actionSwitchSet"));
+  #endif
   for(addrMatchCnt = 0, chipAddrCnt = 0; addrMatchCnt < chipAddrSize; addrMatchCnt++)
   {
     if(array[addrMatchCnt] != chip[chipAddrCnt].chipAddr[addrMatchCnt])
     {
       addrMatchCnt = 0;
       chipAddrCnt++;
-      // Serial.println(chipAddrCnt);
+      
+  #if defined (__SERIAL1_DEBUG__) || defined (__ALL_DEBUG__)
+       Serial.println(chipAddrCnt);
+  #endif
+  
       continue;
     }
-    // Serial.print(array[addrMatchCnt], HEX);
-    // Serial.print(F(","));
+  #if defined (__SERIAL1_DEBUG__) || defined (__ALL_DEBUG__)
+     Serial.print(array[addrMatchCnt], HEX);
+     Serial.print(F(","));
+  #endif
   }
   if(chipAddrCnt <= chipCnt)
   {
-    // Serial.print(F("MATCH!! - "));
+
+  #if defined (__SERIAL1_DEBUG__) || defined (__ALL_DEBUG__)
+     Serial.print(F("MATCH!! - "));
+  #endif
+
     actionPtrMatch = TRUE;
   }else{
-    // Serial.print(F("NO MATCH!! - "));
+
+  #if defined (__SERIAL1_DEBUG__) || defined (__ALL_DEBUG__)
+     Serial.print(F("NO MATCH!! - "));
+  #endif
+  
     actionPtrMatch = FALSE;
   }
-  // Serial.println(chipAddrCnt);
+
+  #if defined (__SERIAL1_DEBUG__) || defined (__ALL_DEBUG__)
+   Serial.println(chipAddrCnt);
+  #endif
+  
   if(actionPtrMatch == TRUE)
   {
     setSwitch(chipAddrCnt, setChipState);
@@ -1126,8 +1240,11 @@ void updateChipStatus(int x)
 
 void updateActions(uint8_t x)
 {
-  // Serial.print(F("updating Action: "));
-  // Serial.print(x);
+
+  #if defined (__SERIAL1_DEBUG__) || defined (__ALL_DEBUG__)
+   Serial.print(F("updating Action: "));
+   Serial.print(x);
+  #endif
   if(action[x].actionEnabled == TRUE)
   {
     if(action[x].tempPtr->chipStatus <= action[x].tooCold &&
@@ -1136,13 +1253,20 @@ void updateActions(uint8_t x)
       if(action[x].tcDelay == 0 || millis() > (action[x].tcMillis + action[x].tcDelay))
       {
         actionSwitchSet((uint8_t *) &action[x].tcPtr->chipAddr, ds2406PIOAon);
-          // Serial.println(F(" - TOO COLD"));
+        
+  #if defined (__SERIAL1_DEBUG__) || defined (__ALL_DEBUG__)
+           Serial.println(F(" - TOO COLD"));
+  #endif        
       }
     }else if(action[x].tempPtr->chipStatus > action[x].tooCold &&
              action[x].tcPtr->chipStatus == switchStatusON){
                actionSwitchSet((uint8_t *) &action[x].tcPtr->chipAddr, ds2406PIOAoff);
                action[x].tcMillis = millis();
-                 // Serial.println(F(" - NOT TOO COLD"));
+               
+  #if defined (__SERIAL1_DEBUG__) || defined (__ALL_DEBUG__)
+                  Serial.println(F(" - NOT TOO COLD"));
+  #endif
+  
     }
 
     if(action[x].tempPtr->chipStatus >= action[x].tooHot &&
@@ -1151,16 +1275,27 @@ void updateActions(uint8_t x)
       if(action[x].thDelay == 0 || millis() > (action[x].thMillis + action[x].thDelay))
       {
         actionSwitchSet((uint8_t *) &action[x].thPtr->chipAddr, ds2406PIOAon);
-          // Serial.println(F(" - TOO HOT"));
+        
+  #if defined (__SERIAL1_DEBUG__) || defined (__ALL_DEBUG__)
+           Serial.println(F(" - TOO HOT"));
+  #endif
+  
       }
     }else if(action[x].tempPtr->chipStatus < action[x].tooHot &&
              action[x].thPtr->chipStatus == switchStatusON){
                actionSwitchSet((uint8_t *) &action[x].thPtr->chipAddr, ds2406PIOAoff);
                action[x].thMillis = millis();
-                 // Serial.println(F(" - NOT TOO HOT"));
+               
+  #if defined (__SERIAL1_DEBUG__) || defined (__ALL_DEBUG__)
+                  Serial.println(F(" - NOT TOO HOT"));
+  #endif
+  
     }
   }else{
-    // Serial.println(F(" - not enabled"));
+
+  #if defined (__SERIAL1_DEBUG__) || defined (__ALL_DEBUG__)
+     Serial.println(F(" - not enabled"));
+  #endif 
   }
 }
 
