@@ -67,7 +67,7 @@
 
   if(trim($eepromStatus) == "FALSE")
   {
-    $bodyStr.="<form method=\"post\" action=\"ActionDataWithMySQL.php\">
+    $bodyStr.="<form method=\"post\" action=\"ActionStatus.php\">
                    <input type=\"hidden\" name=\"restoreall\" value=\"restoreall\">
                     <input type=\"submit\" value=\"RESTORE ALL\">
                   </form>";

@@ -125,9 +125,9 @@ select[type='text'] { font-size: 18px; text-align: center;}
                   // echo $row[0].", ".$row[1].", ".$row[2].", ".$row[3]."<br />";
                   // echo $row[4].", ".$row[5].", ".$row[6].", ".$row[7]."<br />";
                   // echo $row[8].", ".$row[9].", ".$row[10].", ".$row[11]."<br />";
-		              $updateArrayData1 = $row[1]." 0 ".$row[3]." ";
-		              $updateArrayData2 = $row[6]." ".$row[7]." ".$row[5]." ";
-		              $updateArrayData3 = $row[10]." ".$row[11]." ".$row[9]." ";
+		              $updateArrayData1 = $row[1]." 0 ".$row[2]." ";
+		              $updateArrayData2 = $row[4]." ".$row[5]." ".$row[3]." ";
+		              $updateArrayData3 = $row[7]." ".$row[8]." ".$row[6]." ";
 		              $newSocket = makeASocket($service_port, $address);
 		              $in = $updateActionArray." ".$row[0]." 1 ".$updateArrayData1."\n";
 		              socket_write($newSocket, $in, strlen($in));
