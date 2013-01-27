@@ -15,6 +15,7 @@
   $chipX = socket_read($newSocket, $socBufSize);
   socket_close($newSocket);
 
+  // echo $chipX;
   $status=explode(",", $chipX);
   $count = count($status);
 
@@ -44,7 +45,8 @@
        $y++;
        if($y == $maxTempPerLine)
        {
-         $tempStr .= "</tr><tr>";
+         $tempStr .= "
+          </tr><tr>";
          $y = 0;
        }
     }else if((($trimStr = trim($status[$x])) === "N") || (($trimStr = trim($status[$x])) === "F") ){
@@ -114,15 +116,17 @@
       <div id=\"ajax".$x."on\"><span>ON</span></div>
       <div id=\"ajax".$x."off\"><span>OFF</span></div>
       </td>";
-    }
+    $switchStr .=
+      "</div>"
+      ;
     $z++;
     if($z == $maxTempPerLine)
     {
-      $switchStr .= "</tr><tr>";
+      $switchStr .= "
+        </tr><tr>";
       $z = 0;
     }
-    $switchStr .=
-      "</div>";
+   }
   }
 
   echo "<table width=\"100%\" align=\"center\" border=\"2\">\n<tr>\n$tempStr</tr>\n</table>\n\n<table width=\"100%\" align=\"center\" border=\"2\">\n<tr>\n$switchStr</tr>\n</table>\n\n<!-- <table width=\"100%\" align=\"center\" border=\"2\">\n<tr>\n$unusedStr</tr>\n</table> -->";
