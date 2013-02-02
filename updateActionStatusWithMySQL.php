@@ -153,6 +153,14 @@
            <input type=\"hidden\" name=\"actionCnt\" value=\"".$x."\">
            <input type=\"submit\" value=\"ASSIGN\">
          </form>";
+    if($trimStr === "1")
+    {
+      $bodyStr.=
+         "<form method=\"post\" action=\"plotData.php\">
+           <input type=\"hidden\" name=\"graphId\" value=\"".$x."\">
+           <input type=\"submit\" value=\"GRAPH\">
+         </form>";
+    }
     $bodyStr .= 
        "</td>
      </tr>

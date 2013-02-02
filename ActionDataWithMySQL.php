@@ -34,6 +34,14 @@ select[type='text'] { font-size: 18px; text-align: center;}
               include_once("makeASocket.php");
               $tempOptionStr="";
               $switchOptionStr="";
+              $lcdOptionStr="<option value=\"32\">LCD0</option>
+                             <option value=\"33\">LCD1</option>
+                             <option value=\"34\">LCD2</option>
+                             <option value=\"35\">LCD3</option>
+                             <option value=\"36\">LCD4</option>
+                             <option value=\"37\">LCD5</option>
+                             <option value=\"38\">LCD6</option>
+                             <option value=\"39\">LCD7</option>";
               $escapedTempName="";
               $escapedTcName="";
               $escapedThName="";
@@ -92,7 +100,8 @@ select[type='text'] { font-size: 18px; text-align: center;}
 		            $escapedTempName = mysqli_real_escape_string ($link , $_POST["tempName"]);
 		            $escapedTcName = mysqli_real_escape_string ($link , $_POST["tcName"]);
 		            $escapedThName = mysqli_real_escape_string ($link , $_POST["thName"]);
-                $query = "update action set active='".$_POST["enable"]."',tempAddr='".$tempAddrObj->address."',tcAddr='".$tcAddrObj->address."',tcTrigger='".$_POST["tcTemp"]."',tcDelay='".$_POST["tcDelay"]."',thAddr='".$thAddrObj->address."',thTrigger='".$_POST["thTemp"]."',thDelay='".$_POST["thDelay"]."' where id='".$_POST["actionCnt"]."'";
+                $query = "update action set active='".$_POST["enable"]."',tempAddr='".$tempAddrObj->address."',tcAddr='".$tcAddrObj->address."',tcTrigger='".$_POST["tcTemp"]."',tcDelay='".$_POST["tcDelay"]."',thAddr='".$thAddrObj->address."',thTrigger='".$_POST["thTemp"]."',thDelay='".$_POST["thDelay"]."',lcd='".$_POST["lcd"]."',rgb='".$_POST["rgb"]."' where id='".$_POST["actionCnt"]."'";
+//                echo $query."<br />";
                 $result=mysqli_query($link,$query);
 /*
                 if($result === TRUE)
@@ -217,6 +226,7 @@ select[type='text'] { font-size: 18px; text-align: center;}
               socket_close($newSocket);
               $query = "select * from action where id=".$actionCnt;
               $result = mysqli_query($link,$query);
+              $actionObj = mysqli_fetch_object($result);
               //echo "result =".$result;
 
               $actionArray = explode(" ", $out);
@@ -238,13 +248,34 @@ select[type='text'] { font-size: 18px; text-align: center;}
                 echo "<font color=\"green\"><strong>ENABLED&nbsp;&nbsp;</strong></font>";
                 echo "<input type=\"radio\" name=\"enable\" value=\"1\" checked>Enable&nbsp;&nbsp;</input>";
                 echo "<input type=\"radio\" name=\"enable\" value=\"0\">Disable</input>";
-                echo "</td></tr>";
               }else{
                 echo "<font color=\"red\"><strong>DISABLED&nbsp;&nbsp;</strong></font>";
                 echo "<input type=\"radio\" name=\"enable\" value=\"1\">Enable&nbsp;&nbsp;</input>";
                 echo "<input type=\"radio\" name=\"enable\" value=\"0\" checked>Disable</input>";
-                echo "</td></tr>";
               }
+              echo "</td></tr>
+                    <tr><td colspan=\"3\"align =\"center\">
+                    Assign LCD: <select type=\"text\" name=\"lcd\">";
+              if($actionObj->lcd != "0")
+              {
+                $lcdVal = $actionObj->lcd - 32;
+                echo "<option value=\"".$actionObj->lcd."\">LCD".$lcdVal."</option>";
+              }      
+                    
+              echo  "<option value=\"0\">NONE</option>".$lcdOptionStr."</select>
+                    &nbsp;&nbsp;&nbsp;";
+//              echo  "<br />".$actionObj->rgb."<br />";
+              if($actionObj->rgb === '1')
+              {
+                echo "<font color=\"green\"><strong>RGB ENABLED&nbsp;&nbsp;</strong></font>";
+                echo "<input type=\"radio\" name=\"rgb\" value=\"1\" checked>Enable&nbsp;&nbsp;</input>";
+                echo "<input type=\"radio\" name=\"rgb\" value=\"0\">Disable</input>";
+              }else{
+                echo "<font color=\"red\"><strong>RGB DISABLED&nbsp;&nbsp;</strong></font>";
+                echo "<input type=\"radio\" name=\"rgb\" value=\"1\">Enable&nbsp;&nbsp;</input>";
+                echo "<input type=\"radio\" name=\"rgb\" value=\"0\" checked>Disable</input>";
+              }
+              echo "      </td></tr>";
               $tempAddrArray = explode(",", $actionArray[1]);
               if($tempAddrArray[0] === "0x28")
               {
