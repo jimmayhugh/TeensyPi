@@ -4,8 +4,9 @@
   $hotTest = "";
   $coldTest = "";
   $pTemp = new GNUPlot();
+  $actionTime = date("U");
   $rightNow = new DateTime(date());
-  echo "rightNow = ".$rightNow->format("Y-m-d H:i")."\n";
+//  echo "rightNow = ".$rightNow->format("Y-m-d H:i")."\n";
   switch($_POST["interval"])
   {
     case "60":
@@ -30,7 +31,6 @@
       break;
   }
   $id = $_POST["graphId"];
-  $actionTime = date("U");
   if((is_numeric($_POST["cntBack"])) && (is_numeric($_POST["interval"])))
   {
 //    echo $_POST["cntBack"] * $_POST["interval"]."\n";
@@ -40,14 +40,16 @@
   }else if($_POST["cntBetween"] === "cntBetween"){
     $startDate = new DateTime($_POST["startYear"]."/".$_POST["startMonth"]."/".$_POST["startDay"]." ".$_POST["startHour"].":".$_POST["startMinute"]);
     $endDate = new DateTime($_POST["endYear"]."/".$_POST["endMonth"]."/".$_POST["endDay"]." ".$_POST["endHour"].":".$_POST["endMinute"]);
+/*
     echo "startDate = ".$startDate->format("Y-m-d H:i")."\n";
     echo "endDate = ".$endDate->format("Y-m-d H:i")."\n";
     echo "startDate = ".$startDate->format("U")."\n";
     echo "endDate = ".$endDate->format("U")."\n";
+*/
     $query = "SELECT time,temp,tcTemp,tcSwitch,thTemp,thSwitch FROM actionGraph WHERE id='".$_POST["graphId"]."' AND time>='".$startDate->format("U")."' AND time<='".$endDate->format("U")."'";
 //    echo $query."\n";
     $timeSpan = $endDate->format("U") - $startDate->format("U");
-    echo "timeSpan = ".$timeSpan."\n";
+//    echo "timeSpan = ".$timeSpan."\n";
   }else{
     $query = "SELECT time,temp,tcTemp,tcSwitch,thTemp,thSwitch FROM actionGraph WHERE id='".$_POST["graphId"]."'";
   }
@@ -125,7 +127,7 @@
   { 
     $tickMark = "($2/".$_POST["interval"]."):1";
   }else if($_POST["cntBetween"] === "cntBetween"){
-    echo "entering timeSpan Switch Statement\n";
+//    echo "entering timeSpan Switch Statement\n";
     switch($timeSpan)
     {
       case (($timeSpan >= 0) && ($timeSpan <= 3600)):
@@ -159,7 +161,7 @@
     $interval = "Hours";
     $tickMark = "($2/3600):1";
   }
-  echo "tickMark = ".$tickMark."\n";
+//  echo "tickMark = ".$tickMark."\n";
   $pTemp->setDimLabel(x, $interval);
   $pTemp->setDimLabel(y, "Degrees");
   $pTemp->set("terminal png size 1280,400"); 
