@@ -37,7 +37,7 @@
         <td>
         <?php 
             include ("menu.html");
-            if($_POST["restoreall"] === "restoreall")
+            if(isset($_POST["restoreall"]) && $_POST["restoreall"] === "restoreall")
             {
               $h2Str = "<h2>All Action Data Restored</h2>";
               $query = "SELECT * FROM action";

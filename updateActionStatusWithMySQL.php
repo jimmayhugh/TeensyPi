@@ -6,7 +6,7 @@
   $thName = "";
   $tcName = "";
 
-  if($_POST["masterStop"] === "masterStop")
+  if(isset($_POST["masterStop"]) && $_POST["masterStop"] === "masterStop")
   {
     $newSocket = makeASocket($service_port, $address);
     $in = $masterStop."\n";
