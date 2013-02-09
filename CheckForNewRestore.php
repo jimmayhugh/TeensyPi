@@ -28,7 +28,7 @@
         <td>
           <?php 
             include ("menu.html");
-            if(isset($_POST["checknew"] && $_POST["checknew"] === "checknew")
+            if(isset($_POST["checknew"]) && $_POST["checknew"] === "checknew")
             {
               $newSocket = makeASocket($service_port, $address);
               $in = $getNewSensors."\n";
@@ -83,7 +83,7 @@
       <tr>
         <td align="center" colspan="6">
           <?php
-            if(isset($_POST["dbclear"] && $_POST["dbclear"] === "dbclear")
+            if(isset($_POST["dbclear"]) && $_POST["dbclear"] === "dbclear")
             {
               $dbClearStr = "UPDATE `action` SET `active`='0', `tempAddr`='0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00', `tcAddr`='0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00', `tcTrigger`='-255', `tcDelay`='0', `thAddr`='0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00', `thTrigger`='255', `thDelay`='0' WHERE 1";
               $result = mysqli_query($link, $dbClearStr);
