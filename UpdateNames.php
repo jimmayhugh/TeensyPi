@@ -28,7 +28,7 @@
           <?php 
             include ("menu.html");
             echo "<br />";
-            if($_POST["update"] === "update")
+            if(isset($_POST["update"]) && $_POST["update"] === "update")
             {
               $h2Header="<font color=\"red\">Names Updated</font>";
               for($updateCnt=0; $updateCnt<$_POST["maxChipCnt"]; $updateCnt++)
