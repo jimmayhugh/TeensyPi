@@ -12,7 +12,7 @@ input:focus, textarea:focus{background-color: lightgrey;}
 </head>
   <body>
     <?php 
-      include ("head.html");
+      include ("header.html");
     ?> 
     <!-- Table for Main Body -->
     <table width="100%" border="0" cellspacing="0" cellpadding="1">

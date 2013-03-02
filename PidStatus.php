@@ -20,7 +20,7 @@
     $("#container").load("updatePidStatusWithMySQL.php");
    var refreshId = setInterval(function() {
       $("#container").load('updatePidStatusWithMySQL.php');
-   }, 500);
+   }, 1000);
    $.ajaxSetup({ cache: false });
 });
 </script>
@@ -30,8 +30,35 @@
       include_once("accessDatabase.php");
       include_once("makeASocket.php");
       include_once("header.html");
-      $pidTitle = " PID STATUS ";
-    ?> 
+
+      if(isset($_POST["masterPidStop"]) && $_POST["masterPidStop"] === "masterPidStop")
+      {
+        $newSocket = makeASocket($service_port, $address);
+        $in = $masterPidStop."\n";
+        socket_write($newSocket, $in, strlen($in));
+        $chipX = socket_read($newSocket, $socBufSize);
+        socket_close($newSocket);
+      }
+      
+      if(isset($_POST["pidEnable"]) && ($_POST["pidEnable"] === "pidEnable" ) && isset($_POST["pidCnt"]))
+      {  
+        $newSocket = makeASocket($service_port, $address);
+        $in = $setPidArray." ".$_POST["pidCnt"]." 1\n";
+        socket_write($newSocket, $in, strlen($in));
+        $eepromStatus = socket_read($newSocket, $socBufSize);
+        socket_close($newSocket);
+      }
+      
+      if(isset($_POST["pidDisable"]) && ($_POST["pidDisable"] === "pidDisable" ) && isset($_POST["pidCnt"]))
+      {  
+        $newSocket = makeASocket($service_port, $address);
+        $in = $setPidArray." ".$_POST["pidCnt"]." 0\n";
+        socket_write($newSocket, $in, strlen($in));
+        $eepromStatus = socket_read($newSocket, $socBufSize);
+        socket_close($newSocket);
+      }
+    ?>
+    
     <!-- Table for Main Body -->
     <table width="100%" border="0" cellspacing="0" cellpadding="0">
       <tr>
@@ -42,25 +69,18 @@
             {
 //              echo "<br />pidCnt=".$_POST["pidCnt"]."<br />pidEnable=".$_POST["pidEnable"]."<br />pidTempAddr=".$_POST["pidTempAddr"]."<br />pidSetPoint=".$_POST["pidSetPoint"]."<br />pidSwitchAddr=".$_POST["pidSwitchAddr"]."<br />pidKp=".$_POST["pidKp"]."<br />pidKi=".$_POST["pidKi"]."<br />pidKd=".$_POST["pidKd"]."<br />pidDirection=".$_POST["pidDirection"]."<br />pidWindowSize=".$_POST["pidWindowSize"];
               $updatePidStr = "M ".$_POST["pidCnt"]." ".$_POST["pidEnable"]." ".$_POST["pidTempAddr"]." ".$_POST["pidSetPoint"]." ".$_POST["pidSwitchAddr"]." ".$_POST["pidKp"]." ".$_POST["pidKi"]." ".$_POST["pidKd"]." ".$_POST["pidDirection"]." ".$_POST["pidWindowSize"]."\n";
-              echo "<br />".$updatePidStr."<br />";
+//              echo "<br />updatePidStr = ".$updatePidStr."<br />";
               $newSocket = makeASocket($service_port, $address);
               $pidIn = $updatePidStr;
-              echo "pidIn = ".$pidIn."<br />";
+//              echo "pidIn = ".$pidIn.", length = ".strlen($pidIn)."<br />";
               socket_write($newSocket, $pidIn, strlen($pidIn));
               $pidOut = socket_read($newSocket, $socBufSize);
-              echo "pidOut = ".$pidOut."<br />";
+//              echo "pidOut = ".$pidOut."<br />";
               socket_close($newSocket);
               $query = "UPDATE pid SET enabled='".$_POST["pidEnable"]."',tempAddr='".$_POST["pidTempAddr"]."',setpoint='".$_POST["pidSetPoint"]."',switchAddr='".$_POST["pidSwitchAddr"]."',kp='".$_POST["pidKp"]."',ki='".$_POST["pidKi"]."',kd='".$_POST["pidKd"]."',direction='".$_POST["pidDirection"]."',windowSize='".$_POST["pidWindowSize"]."' WHERE id='".$_POST["pidCnt"]."'";
 //              echo $query."<br />";
               $result=mysqli_query($link, $query);
-            }
-            if(isset($_POST["restoreall"]) && $_POST["restoreall"] === "restoreall")
-            {
-              $h2Str = "<h2>All PID Data Restored</h2>";
-              $query = "SELECT * FROM pid";
-              // echo "query = ".$query."<br />";
-              $result=mysqli_query($link,$query);
-              /* 
+/*
               if($result === FALSE)
               {
                 echo "query failed";
@@ -68,7 +88,23 @@
                 echo "query success";
               }
               echo "<br />result = ".$result."<br />";
-              */
+*/
+            }
+            if(isset($_POST["restoreall"]) && $_POST["restoreall"] === "restoreall")
+            {
+              $h2Str = "<h2>All PID Data Restored</h2>";
+              $query = "SELECT * FROM pid";
+//              echo "query = ".$query."<br />";
+              $result=mysqli_query($link,$query);
+/*              
+              if($result === FALSE)
+              {
+                echo "query failed";
+              }else{
+                echo "query success";
+              }
+              echo "<br />result = ".$result."<br />";
+*/              
               while($pidObj = mysqli_fetch_object($result))
               {
 		            $updatePidStr = $pidObj->id." ".$pidObj->enabled." ".$pidObj->tempAddr." ".$pidObj->setpoint." ".$pidObj->switchAddr." ".$pidObj->kp." ".$pidObj->ki." ".$pidObj->kd." ".$pidObj->direction." ".$pidObj->windowSize."\n";

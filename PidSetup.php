@@ -22,6 +22,7 @@ option[type='text'] { font-size: 25px; text-align: center;}
   <body>
     <?php 
       include ("header.html");
+      $bodyStr = "";
     ?> 
     <!-- Table for Main Body -->
     <table width="100%" border="1" cellspacing="0" cellpadding="1">
@@ -44,47 +45,54 @@ option[type='text'] { font-size: 25px; text-align: center;}
               $pidOut = socket_read($newSocket, $socBufSize);
 //              echo "pidOut = ".$pidOut."<br />";
               socket_close($newSocket);
-
-              $pidArray = explode(" ", $pidOut);
-              
-              $pidEnabledStr    = trim($pidArray[0]);
-              $pidTempStr       = trim($pidArray[1]);
-              $pidSetPointStr   = trim($pidArray[2]);
-              $pidSwitchStr     = trim($pidArray[3]);
-              $pidKpStr         = trim($pidArray[4]);
-              $pidKiStr         = trim($pidArray[5]);
-              $pidKdStr         = trim($pidArray[6]);
-              $pidDirectionStr  = trim($pidArray[7]);
-              $pidWindowSizeStr = trim($pidArray[8]);
-
-              $query = "select * from chipNames where address='".$pidTempStr."'";
-              $result = mysqli_query($link,$query);
-              if($result)
+              if($pidOut === "Z")
               {
-                $pidObj = mysqli_fetch_object($result);
-                $pidTempName = $pidObj->name;
+                echo "Invalid Return<br />";
               }else{
-                $pidTempName = "UNASSIGNED";
+                $pidArray = explode(" ", $pidOut);
+                
+                $pidEnabledStr        = trim($pidArray[0]);
+                $pidTempStr           = trim($pidArray[1]);
+                $pidTempStatusStr     = trim($pidArray[2]);
+                $pidSetPointStr       = trim($pidArray[3]);
+                $pidSwitchStr         = trim($pidArray[4]);
+                $pidSwitchStatusStr   = trim($pidArray[5]);
+                $pidKpStr             = trim($pidArray[6]);
+                $pidKiStr             = trim($pidArray[7]);
+                $pidKdStr             = trim($pidArray[8]);
+                $pidDirectionStr      = trim($pidArray[9]);
+                $pidWindowSizeStr     = trim($pidArray[10]);
+
+                $query = "select * from chipNames where address='".$pidTempStr."'";
+                $result = mysqli_query($link,$query);
+                if($result)
+                {
+                  $pidObj = mysqli_fetch_object($result);
+                  $pidTempName = $pidObj->name;
+                }else{
+                  $pidTempName = "UNASSIGNED";
+                }
+                mysqli_free_result($result);
+                
+                $query = "select * from chipNames where address='".$pidSwitchStr."'";
+                $result = mysqli_query($link,$query);
+                if($result)
+                {
+                  $pidObj = mysqli_fetch_object($result);
+                  $pidSwitchName = $pidObj->name;
+                }else{
+                  $pidSwitchName = "UNASSIGNED";
+                }
+                mysqli_free_result($result);
               }
-              mysqli_free_result($result);
               
-              $query = "select * from chipNames where address='".$pidSwitchStr."'";
-              $result = mysqli_query($link,$query);
-              if($result)
-              {
-                $pidObj = mysqli_fetch_object($result);
-                $pidSwitchName = $pidObj->name;
-              }else{
-                $pidSwitchName = "UNASSIGNED";
-              }
-              mysqli_free_result($result);
             ?>
           </div>
         </td>
       </tr>
       <tr>
             <?php
-              $bodyStr.= 
+              $bodyStr .= 
               "<div id=\"pid".$pidCnt."\">
                 <td valign=\"top\" align=\"center\">
                   <table border=\"1\" width=\"50%\" cellspacing=\"0\" cellpadding=\"10\">
@@ -117,15 +125,6 @@ option[type='text'] { font-size: 25px; text-align: center;}
                   ";
               }
               
-              if($pidEnabledStr === "1")
-              {
-                $bodyStr.=
-                    "
-                     <input type=\"hidden\" name=\"pidGraphId\" value=\"".$pidCnt."\">
-                     <input type=\"submit\" value=\"PIDGRAPH\">
-                    ";
-              }
-              
               $bodyStr .= 
                  "</td>
                </tr>
@@ -135,13 +134,21 @@ option[type='text'] { font-size: 25px; text-align: center;}
                     <font size=\"5\" color=\"blue\"><strong>
                       Temperature Chip
                       <select style=\" font-size : 25px\" name=\"pidTempAddr\">
-                        <option value=\"".$pidTempAddr."\" selected>".$pidTempName."</option>
-                      ";
+                        <option value=\"".$pidTempStr."\" selected>".$pidTempName."</option>";
+                        if($pidTempStr !== $dummyAddr)
+                        {
+                          $bodyStr .=
+                          "<option value=\"".$dummyAddr."\">UNASSIGNED</option>";
+                        }
                       $query = "select * from chipNames";
                       $result = mysqli_query($link,$query);
                       while($pidObj = mysqli_fetch_object($result))
                       {
-                        $bodyStr .= "<option value=\"".$pidObj->address."\">".$pidObj->name."</option>";
+                        $addrStrArray = explode(",", $pidObj->address);
+                        if($addrStrArray[0] === "0x28")
+                        {
+                          $bodyStr .= "<option value=\"".$pidObj->address."\">".$pidObj->name."</option>";
+                        }
                       }
                       mysqli_free_result($result);
               $bodyStr .= 
@@ -167,13 +174,21 @@ option[type='text'] { font-size: 25px; text-align: center;}
                     <font size=\"5\" color=\"blue\"><strong>
                       Switch Chip
                       <select style=\" font-size : 25px\" name=\"pidSwitchAddr\">
-                        <option value=\"".$pidSwitchAddr."\" selected>".$pidSwitchName."</option>
-                      ";
+                        <option value=\"".$pidSwitchStr."\" selected>".$pidSwitchName."</option>";
+                        if($pidSwitchStr !== $dummyAddr)
+                        {
+                          $bodyStr .=
+                          "<option value=\"".$dummyAddr."\">UNASSIGNED</option>";
+                        }
                       $query = "select * from chipNames";
                       $result = mysqli_query($link,$query);
                       while($pidObj = mysqli_fetch_object($result))
                       {
-                        $bodyStr .= "<option value=\"".$pidObj->address."\">".$pidObj->name."</option>";
+                        $addrStrArray = explode(",", $pidObj->address);
+                        if($addrStrArray[0] === "0x12")
+                        {
+                          $bodyStr .= "<option value=\"".$pidObj->address."\">".$pidObj->name."</option>";
+                        }
                       }
                       mysqli_free_result($result);
               $bodyStr .= 
@@ -189,10 +204,10 @@ option[type='text'] { font-size: 25px; text-align: center;}
               <tr>
                 <td align=\"center\" colspan=\"4\">
                   <div style=\"vertical-align:middle; min-height:50px;\">
-                    <font size=\"5\" color=\"blue\"><strong>PID Variables
-                      Kp:&nbsp;<input type=\"text\" size=\"6\" maxlength=\"6\" name=\"pidKp\" value=\"".$pidKpStr."\"></input>
-                      Ki:&nbsp;<input type=\"text\" size=\"6\" maxlength=\"6\" name=\"pidKi\" value=\"".$pidKiStr."\"></input>
-                      Kd:&nbsp;<input type=\"text\" size=\"6\" maxlength=\"6\" name=\"pidKd\" value=\"".$pidKdStr."\"></input>
+                    <font size=\"5\" color=\"blue\"><strong>PID Variables<br />
+                      Kp:&nbsp;<input type=\"text\" size=\"10\" maxlength=\"10\" name=\"pidKp\" value=\"".$pidKpStr."\"></input><br />
+                      Ki:&nbsp;<input type=\"text\" size=\"10\" maxlength=\"10\" name=\"pidKi\" value=\"".$pidKiStr."\"></input><br />
+                      Kd:&nbsp;<input type=\"text\" size=\"10\" maxlength=\"10\" name=\"pidKd\" value=\"".$pidKdStr."\"></input>
                     </strong></font>
                   </div>
               ";
@@ -209,14 +224,14 @@ option[type='text'] { font-size: 25px; text-align: center;}
               {
                 $bodyStr .= 
                    "
-                      <input type=\"radio\" name=\"pidDirection\" value=\"1\"><font size=\"5\">Forward</font></input>
-                      <input type=\"radio\" name=\"pidDirection\" value=\"0\" checked><font size=\"5\" color=\"blue\"><strong>REVERSE</strong></font></input>
+                      <input type=\"radio\" name=\"pidDirection\" value=\"0\" checked><font size=\"5\" color=\"red\"><strong>FORWARD</strong></font></input>
+                      <input type=\"radio\" name=\"pidDirection\" value=\"1\"><font size=\"5\" >Reverse</font></input>
                     ";
               }else if($pidDirectionStr === "1"){
                 $bodyStr .= 
                   "
-                      <input type=\"radio\" name=\"pidDirection\" value=\"1\" checked><font size=\"5\" color=\"red\"><strong>FORWARD</strong></font></input>
-                      <input type=\"radio\" name=\"pidDirection\" value=\"0\"><font size=\"5\">Reverse</font></input>
+                      <input type=\"radio\" name=\"pidDirection\" value=\"0\"><font size=\"5\">Forward</font></input>
+                      <input type=\"radio\" name=\"pidDirection\" value=\"1\" checked><font size=\"5\" color=\"blue\"><strong>REVERSE</strong></font></input>
                   ";
               }
               

@@ -5,14 +5,6 @@
   $pidTempName = "";
   $pidSwitchName = "";
 
-  if(isset($_POST["masterPidStop"]) && $_POST["masterPidStop"] === "masterPidStop")
-  {
-    $newSocket = makeASocket($service_port, $address);
-    $in = $masterPidStop."\n";
-    socket_write($newSocket, $in, strlen($in));
-    $eepromStatus = socket_read($newSocket, $socBufSize);
-    socket_close($newSocket);
-  }
   
   $newSocket = makeASocket($service_port, $address);
   $in = $getEEPROMstatus."\n";
@@ -27,10 +19,8 @@
   $chipX = socket_read($newSocket, $socBufSize);
   socket_close($newSocket);
   $pidNum = trim($chipX);
-  
+//  echo "maxPIDs =".$pidNum."<br />";
   $chipYcount = 0;
-  do
-  {
   $newSocket = makeASocket($service_port, $address);
   $in = $getPidStatus."\n";
   socket_write($newSocket, $in, strlen($in));
@@ -39,9 +29,12 @@
  
   $chipY = explode(";", $chipX);
   $chipYcount = count($chipY);
-//  echo $chipX."<br />".$chipYcount."   ".$pidNum;
-  }while($chipYcount < $pidNum);
-
+/*  
+  for($x=0;$x<$chipYcount;$x++)
+  {
+    echo $chipY[$x]."<br />";
+  }
+*/  
   $bodyStr="<table width=\"100%\" border=\"2\" cellspacing=\"0\" cellpadding=\"5\">
               <tr>
                 <td align=\"center\" colspan=\"5\">
@@ -63,7 +56,7 @@
                     <br />
                     </font>
                       ";
-
+/*
   if(trim($eepromStatus) == "FALSE")
   {
     $bodyStr.="<form method=\"post\" action=\"PidStatus.php\">
@@ -71,6 +64,7 @@
                     <input type=\"submit\" value=\"RESTORE ALL\">
                   </form>";
   }
+*/
     $bodyStr.="</td>
               </tr>
               <tr>";
@@ -95,19 +89,23 @@
     $result = mysqli_query($link,$query);
     if($result != NULL && mysqli_num_rows($result) > 0)
     {
-      $finfo = mysqli_fetch_row($result);
-      $pidTempAddress = $finfo[2];
-      $pidSwitchAddress = $finfo[4];
-//      $bodyStr .= "<br />pid".$x." = ".$pidEnabledStr.",".$pidTempStr.",".$pidSetPointStr.",".$pidSwitchStr."<br />";
+//      echo "selected ".mysqli_num_rows($result)." rows<br />";
+      $pidObj = mysqli_fetch_object($result);
+      $pidTempAddress = $pidObj->tempAddr;
+      $pidSwitchAddress = $pidObj->switchAddr;
+//      echo "pid".$x." = ".$pidObJ->tempAddr."&nbsp;&nbsp;".$pidObJ->switchAddr."<br />";
+//      echo "pid".$x." = ".$pidTempAddress."&nbsp;&nbsp;".$pidSwitchAddress."<br />";
       mysqli_free_result($result);
+    }else{
+      echo "Address Query Failed<br />";
     }
     
     $query = "select * from chipNames where address='".$pidTempAddress."'";
     $result = mysqli_query($link,$query);
     if($result != NULL && mysqli_num_rows($result) > 0)
     {
-      $finfo = mysqli_fetch_row($result);
-      $pidTempName = $finfo[2];
+      $pidObj = mysqli_fetch_object($result);
+      $pidTempName = $pidObj->name;
       mysqli_free_result($result);
     }
     if($pidTempAddress == ""){$pidTempAddress = "PID".$x." Temp ";}
@@ -128,29 +126,35 @@
         <table border=\"1\" width=\"100%\" cellspacing=\"0\" cellpadding=\"10\">
           <tr>
             <td align=\"center\" colspan=\"4\">
-              <div style=\"vertical-align:middle; min-height:50px;\">
-                <font size=\"5\" color=\"blue\"><strong>"
-                 .$pidSwitchName."
-                </strong></font>
               <form name=\"pidInfo\" method=\"post\" action=\"PidSetup.php\">
                 <input type=\"hidden\" name=\"pidCnt\" value=\"".$x."\">
                 <input type=\"submit\" value=\"MODIFY\">
               </form>
-            </td>
-          </tr>
+           </td>
           <tr>
             <td align=\"center\" colspan=\"4\">";
     if($pidEnabledStr === "0")
     {
       $bodyStr .= 
-         "<font color=\"red\"><strong>DISABLED</strong></font>";
-    }else if($pidEnabledStr === "1"){
+         "<font color=\"red\"><strong>DISABLED</strong></font>
+              <form name=\"pidInfo\" method=\"post\" action=\"PidStatus.php\">
+                <input type=\"hidden\" name=\"pidCnt\" value=\"".$x."\">
+                <input type=\"hidden\" name=\"pidEnable\" value=\"pidEnable\">
+                <input type=\"submit\" value=\"ENABLE\">
+              </form>";
+     }else if($pidEnabledStr === "1"){
       $bodyStr .= 
-        "<font color=\"green\"><strong>ENABLED</strong></font>";
+        "<font color=\"green\"><strong>ENABLED</strong></font>
+              <form name=\"pidInfo\" method=\"post\" action=\"PidStatus.php\">
+                <input type=\"hidden\" name=\"pidCnt\" value=\"".$x."\">
+                <input type=\"hidden\" name=\"pidDisable\" value=\"pidDisable\">
+                <input type=\"submit\" value=\"DISABLE\">
+              </form>";
     }else{
       $bodyStr .=
         "<font color=\"yellow\"><strong>UNKNOWN = ".$pidEnabledStr."</strong></font><br />";
     }
+    
     if($pidEnabledStr === "1")
     {
       $bodyStr.=
@@ -158,6 +162,51 @@
            <input type=\"hidden\" name=\"pidGraphId\" value=\"".$x."\">
            <input type=\"submit\" value=\"PIDGRAPH\">
          </form>";
+    }
+
+    $bodyStr .= 
+       "</td>
+     </tr>
+<!--
+     <tr>
+       <td align=\"center\" colspan=\"4\">
+         <div style=\"vertical-align:middle; min-height:50px;\">
+           <font size=\"5\" color=\"blue\"><strong>"
+            .$pidTempName."
+           </strong></font>
+       </td>
+     </tr>
+-->     
+     <tr>
+      <td align=\"center\" colspan=\"4\">";
+    if($pidTempStr >= -76 && $pidTempStr < 215)
+    {
+      if($pidTempStr > $pidSetPointStr)
+      {
+        $fontColor = "red";
+
+      }else if($pidTempStr < $pidSetPointStr){
+
+        $fontColor = "blue";
+       
+      }else if($pidTempStr === $pidSetPointStr){
+
+        $fontColor = "green";
+      
+      }
+      
+      $bodyStr .=
+        "<div style=\"vertical-align:middle; min-height:85px; max-height:80px;\">
+           <font size=\"5\" color=\"".$fontColor."\"><strong>
+           ".$pidTempName."
+           </strong></font><br />
+          <font size=\"10\" color=\"".$fontColor."\"><strong>".$pidTempStr."&deg;</strong></font>
+         </div>";
+    }else{
+      $bodyStr .=
+        "<div style=\"vertical-align:middle; min-height:85px;\">
+          <font color=\"red\" size=\"5\"><strong>UNASSIGNED</strong></font>
+         </div>";
     }
     $bodyStr .= 
        "</td>
@@ -173,39 +222,26 @@
      </tr>
      <tr>
       <td align=\"center\" colspan=\"4\">";
-    if($pidTempStr >= -76 && $pidTempStr < 215)
-    {
-      $bodyStr .=
-        "<div style=\"vertical-align:middle; min-height:50px;\">".$pidTempName."<br />
-          <font size=\"10\"><strong>".$pidTempStr."&deg;</strong></font>
-         </div>";
-    }else{
-      $bodyStr .=
-        "<div style=\"vertical-align:middle; min-height:50px;\">
-          <font color=\"red\" size=\"5\"><strong>UNUSED</strong></font>
-         </div>";
-    }
-    $bodyStr .= 
-       "</td>
-     </tr>
-     <tr>
-      <td align=\"center\" colspan=\"4\">";
     if($pidSwitchStr === "N")
     {
         $bodyStr .=
-          $pidSwitchName."
-            <div style=\"vertical-align:middle; min-height:50px;\">
+           "<div style=\"vertical-align:middle; min-height:85px; max-height:85px;\">
+              <font size=\"5\" color=\"blue\"><strong>
+                ".$pidSwitchName."
+              </strong></font><br />              
               <font size=\"10\" color=\"green\"><strong>ON</strong></font>
             </div>";
     }else if($pidSwitchStr === "F"){
         $bodyStr .= 
-          $pidSwitchName."
-            <div style=\"vertical-align:middle; min-height:50px;\">
+           "<div style=\"vertical-align:middle; min-height:85px; max-height:85px;\">
+              <font size=\"5\" color=\"blue\"><strong>
+                ".$pidSwitchName."
+              </strong></font><br />              
               <font size=\"10\" color=\"red\"><strong>OFF</strong></font>
             </div>";
     }else{
         $bodyStr .= "
-            <div style=\"vertical-align:middle; min-height:50px;\">
+            <div style=\"vertical-align:middle; min-height:85px; max-height:90px;\">
               <font size=\"5\" color=\"red\"><strong>UNASSIGNED</strong></font>
             </div>";
     }
@@ -215,8 +251,8 @@
     <tr>
       <td align=\"center\" colspan=\"4\">
         <div style=\"vertical-align:middle; min-height:50px;\">
-          <font size=\"5\" color=\"blue\"><strong>PID Variables
-          Kp:&nbsp;".$pidKpStr."&nbsp;&nbsp;&nbsp;Ki:&nbsp;".$pidKiStr."&nbsp;&nbsp;&nbsp;Kd:&nbsp;".$pidKdStr."
+          <font size=\"5\" color=\"blue\"><strong>PID Variables<br />
+          Kp:&nbsp;".$pidKpStr."<br />Ki:&nbsp;".$pidKiStr."<br />Kd:&nbsp;".$pidKdStr."
           </strong></font>
         </div>
     ";
@@ -227,7 +263,7 @@
       <td align=\"center\" colspan=\"4\">
         <div style=\"vertical-align:middle; min-height:50px;\">
           <font size=\"5\" color=\"blue\"><strong>Direction<br /></strong></font>";
-          if($pidDirectionStr === "1")
+          if($pidDirectionStr === "0")
           {
             $bodyStr .="<font size=\"5\" color=\"red\"><strong>Forward</strong></font>";
           }else{

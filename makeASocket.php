@@ -22,6 +22,7 @@ $masterPidStop      = "K";
 $getPidStatus       = "L";
 $updatePidArray     = "M";
 $getPidArray        = "N";
+$setPidArray        = "O";
 
 $on  = "1";
 $off = "0";

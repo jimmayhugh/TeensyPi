@@ -81,7 +81,24 @@
 		            socket_close($newSocket);
 		            $out3 = $out;
 		          }
-
+		          mysqli_free_result($result);
+		          
+		          $query = "SELECT * from pid";
+              $result=mysqli_query($link,$query);
+              while($obj = mysqli_fetch_object($result))
+              {
+                $updatePidStr = "M ".$obj->id." ".$obj->enabled." ".$obj->tempAddr." ".$obj->setpoint." ".$obj->switchAddr." ".$obj->kp." ".$obj->ki." ".$obj->kd." ".$obj->direction." ".$obj->windowSize."\n";
+//                echo "<br />updatePidStr = ".$updatePidStr."<br />";
+                $newSocket = makeASocket($service_port, $address);
+                $pidIn = $updatePidStr;
+//                echo "pidIn = ".$pidIn.", length = ".strlen($pidIn)."<br />";
+                socket_write($newSocket, $pidIn, strlen($pidIn));
+                $pidOut = socket_read($newSocket, $socBufSize);
+//                echo "pidOut = ".$pidOut."<br />";
+                socket_close($newSocket);
+              }
+		          mysqli_free_result($result);
+              
 		          $newSocket = makeASocket($service_port, $address);
 		          $in = $saveToEEPROM."\n";
 		          socket_write($newSocket, $in, strlen($in));

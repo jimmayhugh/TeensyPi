@@ -3,9 +3,11 @@
   include_once("/var/www/htdocs/accessDatabase.php");
   $hotTest = "";
   $coldTest = "";
+  $maxSetPointTest = "";
+  $minSetPointTest = "";
   $pTemp = new GNUPlot();
   $actionTime = date("U");
-  $rightNow = new DateTime(date());
+  $rightNow = new DateTime(date("c"));
 //  echo "rightNow = ".$rightNow->format("Y-m-d H:i")."\n";
   switch($_POST["interval"])
   {
@@ -30,13 +32,13 @@
       $interval = "Hours";
       break;
   }
-  $id = $_POST["graphId"];
+  $id = $_POST["pidGraphId"];
   if((is_numeric($_POST["cntBack"])) && (is_numeric($_POST["interval"])))
   {
-//    echo $_POST["cntBack"] * $_POST["interval"]."\n";
+//    echo $_POST["cntBack"] * $_POST["interval"]."<br />";
     $startTime = $actionTime - ($_POST["cntBack"] * $_POST["interval"]);
-//    echo $startTime."\n";
-    $query = "SELECT time,temp,tcTemp,tcSwitch,thTemp,thSwitch FROM actionGraph WHERE id='".$_POST["graphId"]."' AND time>='".$startTime."'";
+//    echo $startTime."<br />";
+    $query = "SELECT time,temp,setPoint,switch,direction FROM pidGraph WHERE id='".$_POST["pidGraphId"]."' AND time>='".$startTime."'";
   }else if($_POST["cntBetween"] === "cntBetween"){
     $startDate = new DateTime($_POST["startYear"]."/".$_POST["startMonth"]."/".$_POST["startDay"]." ".$_POST["startHour"].":".$_POST["startMinute"]);
     $endDate = new DateTime($_POST["endYear"]."/".$_POST["endMonth"]."/".$_POST["endDay"]." ".$_POST["endHour"].":".$_POST["endMinute"]);
@@ -46,14 +48,14 @@
     echo "startDate = ".$startDate->format("U")."\n";
     echo "endDate = ".$endDate->format("U")."\n";
 */
-    $query = "SELECT time,temp,tcTemp,tcSwitch,thTemp,thSwitch FROM actionGraph WHERE id='".$_POST["graphId"]."' AND time>='".$startDate->format("U")."' AND time<='".$endDate->format("U")."'";
+    $query = "SELECT time,temp,setPoint,switch,direction FROM pidGraph WHERE id='".$_POST["pidGraphId"]."' AND time>='".$startDate->format("U")."' AND time<='".$endDate->format("U")."'";
 //    echo $query."\n";
     $timeSpan = $endDate->format("U") - $startDate->format("U");
 //    echo "timeSpan = ".$timeSpan."\n";
   }else{
-    $query = "SELECT time,temp,tcTemp,tcSwitch,thTemp,thSwitch FROM actionGraph WHERE id='".$_POST["graphId"]."'";
+    $query = "SELECT time,temp,setPoint,switch,direction FROM pidGraph WHERE id='".$_POST["pidGraphId"]."'";
   }
-//  echo $query."\n";
+//  echo $query."</br />";
   $result = mysqli_query($link, $query);
   $rowCnt = mysqli_num_rows($result);
 
@@ -64,8 +66,8 @@
 
 // assign line values
   $tempData = new PGData('Temperature');
-  $thData   = new PGData('Too Hot Value');
-  $tcData   = new PGData('Too Cold Value');
+  $setPointData   = new PGData('Set Point');
+//  $directionData   = new PGData('Direction');
 
   $oldTime = NULL; 
   while ($obj = mysqli_fetch_object($result))
@@ -75,58 +77,50 @@
       $hotTest = $obj->temp;
     }else if($obj->temp > $hotTest){
       $hotTest = $obj->temp;
-    } 
+    }
+        
     if($coldTest ==="")
     {
       $coldTest = $obj->temp;
     }else if($obj->temp < $coldTest){
       $coldTest = $obj->temp;
+    }
+        
+    if($minSetPointTest ==="")
+    {
+      $minSetPointTest = $obj->setPoint;
+    }else if($obj->setPoint < $minSetPointTest){
+      $minSetPointTest = $obj->temp;
+    }
+    
+    if($maxSetPointTest === "")
+    {
+      $maxSetPointTest = $obj->setPoint;
+    }else if($obj->setPoint > $maxSetPointTest){
+      $maxSetPointTest = $obj->temp;
     } 
-    if($obj->thSwitch === "ON")
-    {
-      $thVal = 1;
-    }else if($obj->thSwitch === "OFF"){
-      $thVal = -1;
-    }else{
-      $thVal = 0;
-    }
-    if($obj->tcSwitch === "ON")
-    {
-      $tcVal = 1;
-    }else if($obj->thSwitch === "OFF"){
-      $tcVal = -1;
-    }else{
-      $tcVal = 0;
-    }
+        
     if($oldTime != NULL)
     {
       $secCnt = ($obj->time) - $oldTime;
       $tempData->addDataEntry(array($obj->temp, $secCnt ));
-      $thData->addDataEntry(array($obj->thTemp, $secCnt ));
-      $tcData->addDataEntry(array($obj->tcTemp, $secCnt ));
+      $setPointData->addDataEntry(array($obj->setPoint, $secCnt ));
+//      $directionData->addDataEntry(array($obj->direction, $secCnt ));
     }else{
       $tempData->addDataEntry(array($obj->temp, 0));
-      $thData->addDataEntry(array($obj->thTemp, 0));
-      $tcData->addDataEntry(array($obj->tcTemp, 0));
+      $setPointData->addDataEntry(array($obj->setPoint, 0));
+//      $directionData->addDataEntry(array($obj->direction, 0));
       $oldTime = $obj->time;
-    }
-    if($coldTest > $obj->tcTemp)
-    {
-      $coldTest = $obj->tcTemp;
-    }
-    if($hotTest < $obj->thTemp)
-    {
-      $hotTest = $obj->thTemp;
     }
   }
 //  echo "Select returned ".$rowCnt." rows.\n";
   mysqli_free_result($result);
-  $tempTitle = "Action ".$id." Temperature Graph";
+  $tempTitle = "PID ".$id." Temperature Graph";
   $pTemp->setTitle($tempTitle);
-  if(is_numeric($_POST["interval"]))
+  if( isset($_POST["interval"]) && is_numeric($_POST["interval"]))
   { 
     $tickMark = "($2/".$_POST["interval"]."):1";
-  }else if($_POST["cntBetween"] === "cntBetween"){
+  }else if( isset($_POST["cntBetween"]) && $_POST["cntBetween"] === "cntBetween"){
 //    echo "entering timeSpan Switch Statement\n";
     switch($timeSpan)
     {
@@ -166,15 +160,26 @@
   $pTemp->setDimLabel(y, "Degrees");
   $pTemp->set("terminal png size 1280,400"); 
   $pTemp->plotData( $tempData, 'lines', $tickMark,'','ls 1'); 
-  $pTemp->plotData( $thData, 'lines', $tickMark,'','ls 2'); 
-  $pTemp->plotData( $tcData, 'lines', $tickMark,'','ls 3');
+  $pTemp->plotData( $setPointData, 'lines', $tickMark,'','ls 2'); 
+//  $pTemp->plotData( $directionData, 'lines', $tickMark,'','ls 3');
 /* 
   $pTemp->plotData( $tempData, 'lines', '($2/3600):1','','ls 1'); 
   $pTemp->plotData( $thData, 'lines', '($2/3600):1','','ls 2'); 
   $pTemp->plotData( $tcData, 'lines', '($2/3600):1','','ls 3');
-*/ 
-  $pTemp->setRange('y', $coldTest-1, $hotTest+1); 
-  $pTemp->export('/var/www/htdocs/pTemp.png');
+*/
+
+  if($minSetPointTest < $coldTest)
+  {
+    $coldTest = $minSetPointTest;
+  } 
+  
+  if($maxSetPointTest > $hotTest)
+  {
+    $hotTest = $maxSetPointTest;
+  } 
+  
+  $pTemp->setRange('y', $coldTest-5, $hotTest+5); 
+  $pTemp->export('/var/www/htdocs/pidTemp.png');
   $pTemp->close(); 
 ?>
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
@@ -182,7 +187,7 @@
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <META HTTP-EQUIV="CACHE-CONTROL" CONTENT="NO-CACHE">
-<title> Action Data </title>
+<title> PID #<?php echo $_POST["pidGraphId"]; ?> Graph </title>
 <link rel="stylesheet" type="text/css" href="style.css"/>
 <script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
 <!-- <script type="text/javascript" src="js/jquery.js"></script> -->
@@ -194,11 +199,12 @@ input:focus, textarea:focus{background-color: lightgrey;}
   <body>
     <?php 
       include ("header.html");
-      $query = "SELECT time FROM actionGraph WHERE id='".$_POST["graphId"]."'";
+//      echo "coldTest = ".$coldTest.", hotTest = ".$hotTest."<br />";
+      $query = "SELECT time FROM pidGraph WHERE id='".$_POST["pidGraphId"]."'";
       $result = mysqli_query($link, $query);
       $obj = mysqli_fetch_object($result);
       $startDateTime = $obj->time;
-      echo "startDateTime = ".date("Y m d H i", $startDateTime)."<br />";
+//      echo "startDateTime = ".date("Y m d H i", $startDateTime)."<br />";
       mysqli_free_result($result);
       mysqli_close($link);
     ?> 
@@ -213,13 +219,13 @@ input:focus, textarea:focus{background-color: lightgrey;}
       </tr>
       <tr>
         <td valign="top" align="center" colspan="2" width="100%">
-          <h2>Action #<?php echo $_POST["graphId"]; ?> Graph</h2>
+          <h2>PID #<?php echo $_POST["pidGraphId"]; ?> Graph</h2>
         </td>
       </tr>
       <tr>
         <td align="center">
-          <form method="post" action="plotData.php">
-            <?php echo "<input type=\"hidden\" name=\"graphId\" value=\"".$_POST["graphId"]."\">"; ?>
+          <form method="post" action="plotPidData.php">
+            <?php echo "<input type=\"hidden\" name=\"pidGraphId\" value=\"".$_POST["pidGraphId"]."\">"; ?>
             Go Back: <input type="text" size="4" maxsize="4" name="cntBack">
             <select name="interval">
               <option value="60">Minutes</option>
@@ -235,8 +241,8 @@ input:focus, textarea:focus{background-color: lightgrey;}
           <table>
             <tr>
               <td>
-                <form method="post" action="plotData.php">
-                  <?php echo "<input type=\"hidden\" name=\"graphId\" value=\"".$_POST["graphId"]."\">"; ?>
+                <form method="post" action="plotPidData.php">
+                  <?php echo "<input type=\"hidden\" name=\"pidGraphId\" value=\"".$_POST["pidGraphId"]."\">"; ?>
                   <input type="hidden" name="cntBetween" value="cntBetween">
               </td>
               <td>
@@ -245,12 +251,12 @@ input:focus, textarea:focus{background-color: lightgrey;}
                     <td>
                         Start:
                         <select name="startYear">
-                        <?php echo" <option value=\"".date("Y", startDateTime)."\">".date("Y", startDateTime)."\n"; ?>
+                        <?php echo" <option value=\"".date("Y",$startDateTime)."\">".date("Y",$startDateTime)."\n"; ?>
                           <option value="2012">2012</option>
                           <option value="2013">2013</option>
                         </select>
                         <select name="startMonth">
-                        <?php echo" <option value=\"".date("m", startDateTime)."\">".date("F", startDateTime)."</option>\n"; ?>
+                        <?php echo" <option value=\"".date("m",$startDateTime)."\">".date("F",$startDateTime)."</option>\n"; ?>
                           <option value="01">January</option>
                           <option value="02">February</option>
                           <option value="03">March</option>
@@ -266,7 +272,7 @@ input:focus, textarea:focus{background-color: lightgrey;}
                         </select>
                         <select name="startDay">
                         <?php
-                            echo"<option value=\"".date("d", startDateTime)."\">".date("d", startDateTime)."<option\n";
+                            echo"<option value=\"".date("d",$startDateTime)."\">".date("d",$startDateTime)."<option\n";
                             for($thisDay=1; $thisDay < 32; $thisDay++)
                             {
                               echo "\t\t\t  <option value=\"".$thisDay."\">".$thisDay."</option>\n";
@@ -275,7 +281,7 @@ input:focus, textarea:focus{background-color: lightgrey;}
                         </select>
                         <select name="startHour">
                           <?php
-                            echo"<option value=\"".date("H", startDateTime)."\">".date("H", startDateTime)."</option>\n";
+                            echo"<option value=\"".date("H",$startDateTime)."\">".date("H",$startDateTime)."</option>\n";
                             for($thisHour=0; $thisHour < 24; $thisHour++)
                             {
                               echo "\t\t\t  <option value=\"".$thisHour."\">".$thisHour."</option>\n";
@@ -284,7 +290,7 @@ input:focus, textarea:focus{background-color: lightgrey;}
                         </select>
                         <select name="startMinute">
                           <?php
-                            echo"<option value=\"".date("i", startDateTime)."\">".date("i", startDateTime)."</option>\n";
+                            echo"<option value=\"".date("i",$startDateTime)."\">".date("i",$startDateTime)."</option>\n";
                             for($thisMinute=0; $thisMinute < 60; $thisMinute++)
                             {
                               echo "\t\t\t  <option value=\"".$thisMinute."\">".$thisMinute."</option>\n";
@@ -355,7 +361,7 @@ input:focus, textarea:focus{background-color: lightgrey;}
       </tr>
       <tr>
         <td colspan="2" >
-          <img src="pTemp.png">
+          <img src="pidTemp.png">
         </td>
       </tr>
       <tr>
