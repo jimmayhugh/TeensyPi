@@ -11,7 +11,7 @@
   General Setup
 */
 
-uint8_t setDebug = 0x4;
+uint8_t setDebug = 0x0;
 
 const uint8_t allDebug      = 0x01; 
 const uint8_t pidDebug      = 0x02; 
