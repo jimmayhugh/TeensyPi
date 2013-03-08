@@ -77,6 +77,14 @@
               $pidOut = socket_read($newSocket, $socBufSize);
 //              echo "pidOut = ".$pidOut."<br />";
               socket_close($newSocket);
+
+		          $newSocket = makeASocket($service_port, $address);
+		          $in = $saveToEEPROM."\n";
+		          socket_write($newSocket, $in, strlen($in));
+		          $out = socket_read($newSocket, $socBufSize);
+		          socket_close($newSocket);
+		          sleep(2);
+
               $query = "UPDATE pid SET enabled='".$_POST["pidEnable"]."',tempAddr='".$_POST["pidTempAddr"]."',setpoint='".$_POST["pidSetPoint"]."',switchAddr='".$_POST["pidSwitchAddr"]."',kp='".$_POST["pidKp"]."',ki='".$_POST["pidKi"]."',kd='".$_POST["pidKd"]."',direction='".$_POST["pidDirection"]."',windowSize='".$_POST["pidWindowSize"]."' WHERE id='".$_POST["pidCnt"]."'";
 //              echo $query."<br />";
               $result=mysqli_query($link, $query);
