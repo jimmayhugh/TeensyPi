@@ -31,6 +31,8 @@ const uint8_t serialDebug   = 0x20;
 
 uint8_t setDebug = noDebug;
 
+const char* versionStr = "TeensyPiPidDebug Version 0.0.1";
+
   
 
 // define serial commands
@@ -62,6 +64,8 @@ const uint8_t getPidArray        = updatePidArray + 1;    // 'N'
 const uint8_t setPidArray        = getPidArray + 1;       // 'O'
 const uint8_t useDebug           = setPidArray + 1;       // 'P'
 const uint8_t restoreStructures  = useDebug + 1;          // 'Q'
+
+const uint8_t versionID          = 'z';
 
 // end of serial commands
 
@@ -1733,6 +1737,12 @@ void softSerialProcess()
     {
       readStructures();
       Serial1.print(F("\n\0"));
+      break;
+    }
+    
+    case versionID: // "z"
+    {
+      Serial1.println(versionStr);
       break;
     }
     
