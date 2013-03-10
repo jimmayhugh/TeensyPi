@@ -1,3 +1,13 @@
+/********************
+
+TeensyPiPidDebug.ino
+
+Version 0.0.1
+Last Modified 03/10/2013
+By Jim Mayhugh
+
+
+*********************/
 #include <PID_v1.h>
 #include <math.h>
 #include <EEPROM.h>
@@ -255,25 +265,25 @@ void setup()
   pinMode(waitLED, OUTPUT);
   digitalWrite(waitPin, LOW);
   digitalWrite(waitLED, LOW);
-  Serial.begin(baudRate);
   
   if(setDebug > 0x0)
   {  
     delay(3000);
+    Serial.begin(baudRate);
+    Serial.print(F("Serial Debug running at "));
+    Serial.print(baudRate);
+    Serial.println(F(" baud"));
+    
+    Serial.print(F("chip address = 0x"));
+    Serial.println((uint32_t) &chip, HEX);
+  
+    Serial.print(F("action address = 0x"));
+    Serial.println((uint32_t) &action, HEX);
+  
+    Serial.print(F("ePID address = 0x"));
+    Serial.println((uint32_t) &ePID, HEX);
   }
   
-  Serial.print(F("Serial Debug running at "));
-  Serial.print(baudRate);
-  Serial.println(F(" baud"));
-  
-  Serial.print(F("chip address = 0x"));
-  Serial.println((uint32_t) &chip, HEX);
-
-  Serial.print(F("action address = 0x"));
-  Serial.println((uint32_t) &action, HEX);
-
-  Serial.print(F("ePID address = 0x"));
-  Serial.println((uint32_t) &ePID, HEX);
 
 
   eeResult = EEPROM.read(EEPROMidAddr);
@@ -1697,9 +1707,25 @@ void softSerialProcess()
     {
       
       setDebug = atoi((char *) &softSerialBuffer[1]);
-      Serial1.print(F("0x"));
+      if(setDebug > 0)
+      {
+        Serial.begin(baudRate);
+        Serial.print(F("Serial Debug running at "));
+        Serial.print(baudRate);
+        Serial.println(F(" baud"));
+      }else{
+        Serial.end();
+      }
+
+      if(setDebug >= 0 && setDebug <= 15)
+      {
+        Serial1.print(F("0x0"));
+      }else{
+        Serial1.print(F("0x"));
+      }
       Serial1.print(setDebug, HEX);
       Serial1.print(F("\n\0"));
+      
       break;
     }
     
