@@ -1,9 +1,9 @@
 /********************
 
-TeensyPiPidDebug.ino
+TeensyPi.ino
 
-Version 0.0.1
-Last Modified 03/10/2013
+Version 0.0.2
+Last Modified 03/14/2013
 By Jim Mayhugh
 
 
@@ -21,17 +21,16 @@ By Jim Mayhugh
   General Setup
 */
 
-const uint8_t noDebug       = 0x00;
+const char* versionStr = "TeensyPi Version 0.0.2";
+
+uint8_t setDebug = 0x0;
+
 const uint8_t allDebug      = 0x01; 
 const uint8_t pidDebug      = 0x02; 
 const uint8_t eepromDebug   = 0x04; 
 const uint8_t chipDebug     = 0x08; 
 const uint8_t serial1Debug  = 0x10; 
 const uint8_t serialDebug   = 0x20; 
-
-uint8_t setDebug = noDebug;
-
-const char* versionStr = "TeensyPiPidDebug Version 0.0.1";
 
   
 
@@ -48,24 +47,25 @@ const uint8_t getChipType        = getAllStatus + 1;
 const uint8_t getAllChips        = getChipType + 1; // last in this series
 
 const uint8_t getActionArray     = 'A'; // start of new serial command list
-const uint8_t updateActionArray  = getActionArray + 1;    // 'B'
-const uint8_t getActionStatus    = updateActionArray + 1; // 'C'
-const uint8_t getMaxActions      = getActionStatus + 1;   // 'D'
-const uint8_t setActionSwitch    = getMaxActions + 1;     // 'E'
-const uint8_t saveToEEPROM       = setActionSwitch + 1;   // 'F'
-const uint8_t getEEPROMstatus    = saveToEEPROM + 1;      // 'G'
-const uint8_t getNewSensors      = getEEPROMstatus + 1;   // 'H'
-const uint8_t masterStop         = getNewSensors + 1;     // 'I'
-const uint8_t getMaxPids         = masterStop + 1;        // 'J'
-const uint8_t masterPidStop      = getMaxPids + 1;        // 'K'
-const uint8_t getPidStatus       = masterPidStop + 1;     // 'L'
-const uint8_t updatePidArray     = getPidStatus + 1;      // 'M'
-const uint8_t getPidArray        = updatePidArray + 1;    // 'N'
-const uint8_t setPidArray        = getPidArray + 1;       // 'O'
-const uint8_t useDebug           = setPidArray + 1;       // 'P'
-const uint8_t restoreStructures  = useDebug + 1;          // 'Q'
+const uint8_t updateActionArray  = getActionArray + 1;    // "B"
+const uint8_t getActionStatus    = updateActionArray + 1; // "C"
+const uint8_t getMaxActions      = getActionStatus + 1;   // "D"
+const uint8_t setActionSwitch    = getMaxActions + 1;     // "E"
+const uint8_t saveToEEPROM       = setActionSwitch + 1;   // "F"
+const uint8_t getEEPROMstatus    = saveToEEPROM + 1;      // "G"
+const uint8_t getNewSensors      = getEEPROMstatus + 1;   // "H"
+const uint8_t masterStop         = getNewSensors + 1;     // "I"
+const uint8_t getMaxPids         = masterStop + 1;        // "J"
+const uint8_t masterPidStop      = getMaxPids + 1;        // "K"
+const uint8_t getPidStatus       = masterPidStop + 1;     // "L"
+const uint8_t updatePidArray     = getPidStatus + 1;      // "M"
+const uint8_t getPidArray        = updatePidArray + 1;    // "N"
+const uint8_t setPidArray        = getPidArray + 1;       // "O"
+const uint8_t useDebug           = setPidArray + 1;       // "P"
+const uint8_t restoreStructures  = useDebug + 1;          // "Q"
 
 const uint8_t versionID          = 'z';
+
 
 // end of serial commands
 
@@ -237,26 +237,24 @@ chipPIDStruct ePID[maxPIDs] =
 };
 
 //Specify the links and initial tuning parameters
-
-PID PID0(NULL, NULL, NULL, NULL, NULL, NULL, NULL);
-PID PID1(NULL, NULL, NULL, NULL, NULL, NULL, NULL);
-PID PID2(NULL, NULL, NULL, NULL, NULL, NULL, NULL);
-PID PID3(NULL, NULL, NULL, NULL, NULL, NULL, NULL);
-PID PID4(NULL, NULL, NULL, NULL, NULL, NULL, NULL);
-PID PID5(NULL, NULL, NULL, NULL, NULL, NULL, NULL);
-PID PID6(NULL, NULL, NULL, NULL, NULL, NULL, NULL);
-PID PID7(NULL, NULL, NULL, NULL, NULL, NULL, NULL);
-
+PID PID0(&ePID[0].pidInput,   &ePID[0].pidOutput,  &ePID[0].pidSetPoint,  (double) ePID[0].pidKp,  (double) ePID[0].pidKi,  (double) ePID[0].pidKd,  ePID[0].pidDirection);
+PID PID1(&ePID[1].pidInput,   &ePID[1].pidOutput,  &ePID[1].pidSetPoint,  (double) ePID[1].pidKp,  (double) ePID[1].pidKi,  (double) ePID[1].pidKd,  ePID[1].pidDirection);
+PID PID2(&ePID[2].pidInput,   &ePID[2].pidOutput,  &ePID[2].pidSetPoint,  (double) ePID[2].pidKp,  (double) ePID[2].pidKi,  (double) ePID[2].pidKd,  ePID[2].pidDirection);
+PID PID3(&ePID[3].pidInput,   &ePID[3].pidOutput,  &ePID[3].pidSetPoint,  (double) ePID[3].pidKp,  (double) ePID[3].pidKi,  (double) ePID[3].pidKd,  ePID[3].pidDirection);
+PID PID4(&ePID[4].pidInput,   &ePID[4].pidOutput,  &ePID[4].pidSetPoint,  (double) ePID[4].pidKp,  (double) ePID[4].pidKi,  (double) ePID[4].pidKd,  ePID[4].pidDirection);
+PID PID5(&ePID[5].pidInput,   &ePID[5].pidOutput,  &ePID[5].pidSetPoint,  (double) ePID[5].pidKp,  (double) ePID[5].pidKi,  (double) ePID[5].pidKd,  ePID[5].pidDirection);
+PID PID6(&ePID[6].pidInput,   &ePID[6].pidOutput,  &ePID[6].pidSetPoint,  (double) ePID[6].pidKp,  (double) ePID[6].pidKi,  (double) ePID[6].pidKd,  ePID[6].pidDirection);
+PID PID7(&ePID[7].pidInput,   &ePID[7].pidOutput,  &ePID[7].pidSetPoint,  (double) ePID[7].pidKp,  (double) ePID[7].pidKi,  (double) ePID[7].pidKd,  ePID[7].pidDirection);
 
 PID *pidArrayPtr[] = {&PID0,&PID1,&PID2,&PID3,&PID4,&PID5,&PID6,&PID7};
-// End PID Stuff
 
+// End PID Stuff
 
 //EEPROM Stuff
 const int   EEPROMsize       = 2048;   // Cortex M4
-const int   EEPROMidAddr     = 0x00;   // ID address to verify a previous EEPROM write
-const int   EEPROMccAddr     = 0x10;   // number of chips found during findchips()
-const int   EEPROMchipAddr   = 0x20;   // start address of structures
+const int   EEPROMidAddr     = 0x10;   // ID address to verify a previous EEPROM write
+const int   EEPROMccAddr     = 0x20;   // number of chips found during findchips()
+const int   EEPROMchipAddr   = 0x40;  // start address of structures
 const byte  EEPROMidVal      = 0x55;   // Shows that an EEPROM update has occurred 
 bool        eepromReady      = FALSE;
 int         eepromSpace, eeResult, EEPROMactionAddr, EEPROMpidAddr;
@@ -264,30 +262,20 @@ int         eepromSpace, eeResult, EEPROMactionAddr, EEPROMpidAddr;
 void setup()
 {
   int x;
-  double booger;
   pinMode(waitPin, OUTPUT);
   pinMode(waitLED, OUTPUT);
   digitalWrite(waitPin, LOW);
   digitalWrite(waitLED, LOW);
+  Serial.begin(baudRate);
   
   if(setDebug > 0x0)
   {  
     delay(3000);
-    Serial.begin(baudRate);
-    Serial.print(F("Serial Debug running at "));
-    Serial.print(baudRate);
-    Serial.println(F(" baud"));
-    
-    Serial.print(F("chip address = 0x"));
-    Serial.println((uint32_t) &chip, HEX);
-  
-    Serial.print(F("action address = 0x"));
-    Serial.println((uint32_t) &action, HEX);
-  
-    Serial.print(F("ePID address = 0x"));
-    Serial.println((uint32_t) &ePID, HEX);
   }
   
+  Serial.print(F("Serial Debug running at "));
+  Serial.print(baudRate);
+  Serial.println(F(" baud"));
 
 
   eeResult = EEPROM.read(EEPROMidAddr);
@@ -346,7 +334,6 @@ void setup()
   timer2 = millis();
   
   pidSetup();
-
 }
 
 void loop()
@@ -390,32 +377,15 @@ void loop()
     }
     
     softSerialProcess();
-    if((setDebug & serialDebug) || (setDebug & allDebug))
-    {
-      Serial.println(F("Return From SoftSerialProcess"));
-    }
   }
   
   if(timer > (millis() + 5000)) // in case of rollover
   {
     timer = millis();
-    
-    if(setDebug & allDebug)
-    {
-      Serial.print(F("timer = "));
-      Serial.println(timer);
-    }
   }
   
   if(millis() > (timer + 125))
   {
-    
-    if(setDebug & allDebug)
-    {
-      Serial.print(F("timer = "));
-      Serial.println(timer);
-    }
-    
     updateChipStatus(chipX);
     chipX++;
     if(chipX >= maxChips){chipX = 0;}
@@ -462,16 +432,23 @@ void pidSetup(void)
     }
     
     
-  //turn the PID on
-    if(ePID[x].pidEnabled == TRUE)
+  //turn the PID on if variable are non-zero
+    if( (ePID[x].pidEnabled == TRUE) &&
+        (ePID[x].pidKp != 0) &&
+        (ePID[x].pidKi != 0) &&
+        (ePID[x].pidKd != 0) &&
+        (ePID[x].pidWindowSize != 0)
+        )
     {
       ePID[x].myPID->SetMode(AUTOMATIC);
     }else{
+      ePID[x].pidEnabled = FALSE;
       ePID[x].myPID->SetMode(MANUAL);
     }
   }
 
 }
+
 
 void readStructures(void)
 {  
@@ -640,18 +617,12 @@ void displayStructure(byte *addr, int size)
   Serial.println();
   Serial.println();
 }
+
+
 void updatePIDs(uint8_t pidCnt)
 {
   digitalWrite(waitPin, LOW);
   digitalWrite(waitLED, LOW);
-  
-  if( (setDebug & pidDebug) || (setDebug & allDebug) )
-  {
-    Serial.print(F("Entering updatePIDs - PID #"));
-    Serial.println(pidCnt);
-    Serial.print(F("pidEnabled = "));
-    Serial.println(ePID[pidCnt].pidEnabled);
-  }
   
   if(ePID[pidCnt].pidEnabled == 1)
   {    
@@ -667,6 +638,18 @@ void updatePIDs(uint8_t pidCnt)
       Serial.print(pidCnt);
       Serial.print(F("].pidInput = "));
       Serial.println((double) ePID[pidCnt].pidInput);
+      Serial.print(F("ePID["));
+      Serial.print(pidCnt);
+      Serial.print(F("].pidKp = "));
+      Serial.println(ePID[pidCnt].pidKp);
+      Serial.print(F("ePID["));
+      Serial.print(pidCnt);
+      Serial.print(F("].pidKi = "));
+      Serial.println(ePID[pidCnt].pidKi);
+      Serial.print(F("ePID["));
+      Serial.print(pidCnt);
+      Serial.print(F("].pidKd = "));
+      Serial.println(ePID[pidCnt].pidKd);
       Serial.print(F("ePID["));
       Serial.print(pidCnt);
       Serial.print(F("].pidDirection = "));
@@ -693,6 +676,12 @@ void updatePIDs(uint8_t pidCnt)
     }
 
     uint32_t now = millis();
+    
+    if( (setDebug & pidDebug) || (setDebug & allDebug) )
+    {
+      Serial.print(F("now - ePID[pidCnt].pidwindowStartTime = "));
+      Serial.println(now - ePID[pidCnt].pidwindowStartTime);
+    }
 
   /************************************************
    * turn the output pin on/off based on pid output
@@ -757,20 +746,7 @@ void updatePIDs(uint8_t pidCnt)
 
   }else{
     ePID[pidCnt].myPID->SetMode(MANUAL);
-    if( (setDebug & pidDebug) || (setDebug & allDebug) )
-    {
-      Serial.print(F("PID #"));
-      Serial.print(pidCnt);
-      Serial.println(F(" Not Enabled"));
-    }
   }
-  
-  if( (setDebug & pidDebug) || (setDebug & allDebug) )
-  {
-    Serial.print(F("Exiting updatePIDs - PID #"));
-    Serial.println(pidCnt);
-  }
-  
   digitalWrite(waitPin, HIGH);
   digitalWrite(waitLED, HIGH);
 }
@@ -1358,10 +1334,10 @@ void softSerialProcess()
     {
       if(eepromReady == FALSE)
       {
-        Serial1.print(F("FALSE\n"));
+        Serial1.print(F("FALSE"));
       }else
       {
-        Serial1.print(F("TRUE\n"));
+        Serial1.print(F("TRUE"));
       }
       break;
     }
@@ -1514,16 +1490,6 @@ void softSerialProcess()
         Serial.println(pidWindowSizePtr);
       }
   
-      pidEnabledVal = atoi(pidEnabledPtr);
-      if(pidEnabledVal == 0)
-      {
-        ePID[pidArray].pidEnabled = FALSE;
-        ePID[pidArray].myPID->SetMode(MANUAL);
-      }else{
-        ePID[pidArray].pidEnabled = TRUE;
-        ePID[pidArray].myPID->SetMode(AUTOMATIC);
-      }
-      
       if( (setDebug & pidDebug) || (setDebug & allDebug) )
       {
         Serial.print(F("pidEnabled = "));
@@ -1639,6 +1605,23 @@ void softSerialProcess()
       ePID[pidArray].pidWindowSize = strtol(pidWindowSizePtr, NULL, 10);
       ePID[pidArray].myPID->SetOutputLimits(0, ePID[pidArray].pidWindowSize);
       ePID[pidArray].pidwindowStartTime = millis();
+
+      pidEnabledVal = atoi(pidEnabledPtr);
+      if( (pidEnabledVal == 0) ||
+          (ePID[pidArray].pidKp == 0) ||
+          (ePID[pidArray].pidKi == 0) ||
+          (ePID[pidArray].pidKd == 0) ||
+          (ePID[pidArray].pidWindowSize == 0) ||
+          (ePID[pidArray].switchPtr == NULL) ||
+          (ePID[pidArray].tempPtr == NULL)
+        )
+      {
+        ePID[pidArray].pidEnabled = FALSE;
+        ePID[pidArray].myPID->SetMode(MANUAL);
+      }else{
+        ePID[pidArray].pidEnabled = TRUE;
+        ePID[pidArray].myPID->SetMode(AUTOMATIC);
+      }
       
       if( (setDebug & pidDebug) || (setDebug & allDebug) )
       {
@@ -1701,6 +1684,7 @@ void softSerialProcess()
         actionSwitchSet((uint8_t *) &ePID[x].switchPtr->chipAddr, ds2406PIOAoff);
       }else{
         ePID[x].pidEnabled = TRUE;
+        ePID[x].pidwindowStartTime = millis();
         ePID[x].myPID->SetMode(AUTOMATIC);
       }
       Serial1.print(F("\0"));
@@ -1711,28 +1695,12 @@ void softSerialProcess()
     {
       
       setDebug = atoi((char *) &softSerialBuffer[1]);
-      if(setDebug > 0)
-      {
-        Serial.begin(baudRate);
-        Serial.print(F("Serial Debug running at "));
-        Serial.print(baudRate);
-        Serial.println(F(" baud"));
-      }else{
-        Serial.end();
-      }
-
-      if(setDebug >= 0 && setDebug <= 15)
-      {
-        Serial1.print(F("0x0"));
-      }else{
-        Serial1.print(F("0x"));
-      }
+      Serial1.print(F("0x"));
       Serial1.print(setDebug, HEX);
       Serial1.print(F("\n\0"));
-      
       break;
     }
-    
+ 
     case restoreStructures: // "Q"
     {
       readStructures();
@@ -1740,12 +1708,12 @@ void softSerialProcess()
       break;
     }
     
-    case versionID: // "z"
+     case versionID: // "z"
     {
       Serial1.println(versionStr);
       break;
     }
-    
+       
   }
 
   Serial1.print(F("\n"));
@@ -1834,7 +1802,7 @@ void getAllPidStatus(void)
   
   if( (setDebug & pidDebug) || (setDebug & allDebug) )
   {
-   Serial.println(F("Entering getAllPidStatus "));
+  // Serial.println(F("Entering getAllPidStatus(void) "));
   }
   
   // x = atoi((char *) &softSerialBuffer[1]);
@@ -1877,7 +1845,7 @@ void getAllPidStatus(void)
   
   if( (setDebug & pidDebug) || (setDebug & allDebug) )
   {
-    Serial.println(F("Exiting getAllPidStatus(void) "));
+  //Serial.println(F("Exiting getAllPidStatus(void) "));
   }
 }
 
