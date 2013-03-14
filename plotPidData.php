@@ -179,7 +179,7 @@
   } 
   
   $pTemp->setRange('y', $coldTest-5, $hotTest+5); 
-  $pTemp->export('/var/www/htdocs/pidTemp.png');
+  $pTemp->export('/var/www/images/pidTemp.png');
   $pTemp->close(); 
 ?>
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
@@ -361,7 +361,7 @@ input:focus, textarea:focus{background-color: lightgrey;}
       </tr>
       <tr>
         <td colspan="2" >
-          <img src="pidTemp.png">
+          <img src="images/pidTemp.png">
         </td>
       </tr>
       <tr>

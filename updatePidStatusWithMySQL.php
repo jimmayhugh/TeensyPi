@@ -93,6 +93,7 @@
       $pidObj = mysqli_fetch_object($result);
       $pidTempAddress = $pidObj->tempAddr;
       $pidSwitchAddress = $pidObj->switchAddr;
+//      echo "pid".$x."pidTempStr = ".$pidTempStr."&nbsp;&nbsp;&nbsp; pidSwitchStr = ".$pidSwitchStr."<br />";
 //      echo "pid".$x." = ".$pidObJ->tempAddr."&nbsp;&nbsp;".$pidObJ->switchAddr."<br />";
 //      echo "pid".$x." = ".$pidTempAddress."&nbsp;&nbsp;".$pidSwitchAddress."<br />";
       mysqli_free_result($result);
@@ -133,35 +134,56 @@
            </td>
           <tr>
             <td align=\"center\" colspan=\"4\">";
-    if($pidEnabledStr === "0")
+    if( ($pidTempStr === "255") ||
+        ($pidTempStr === "-255") ||
+        ($pidSwitchStr === "255") ||
+        ($pidWindowSizeStr === "0")
+        )
     {
-      $bodyStr .= 
-         "<font color=\"red\"><strong>DISABLED</strong></font>
-              <form name=\"pidInfo\" method=\"post\" action=\"PidStatus.php\">
-                <input type=\"hidden\" name=\"pidCnt\" value=\"".$x."\">
-                <input type=\"hidden\" name=\"pidEnable\" value=\"pidEnable\">
-                <input type=\"submit\" value=\"ENABLE\">
-              </form>";
-     }else if($pidEnabledStr === "1"){
-      $bodyStr .= 
-        "<font color=\"green\"><strong>ENABLED</strong></font>
-              <form name=\"pidInfo\" method=\"post\" action=\"PidStatus.php\">
-                <input type=\"hidden\" name=\"pidCnt\" value=\"".$x."\">
-                <input type=\"hidden\" name=\"pidDisable\" value=\"pidDisable\">
-                <input type=\"submit\" value=\"DISABLE\">
-              </form>";
-    }else{
-      $bodyStr .=
-        "<font color=\"yellow\"><strong>UNKNOWN = ".$pidEnabledStr."</strong></font><br />";
-    }
-    
-    if($pidEnabledStr === "1")
-    {
-      $bodyStr.=
-         "<form method=\"post\" action=\"plotPidData.php\">
-           <input type=\"hidden\" name=\"pidGraphId\" value=\"".$x."\">
-           <input type=\"submit\" value=\"PIDGRAPH\">
-         </form>";
+        $bodyStr .= 
+           "<font color=\"blue\"><strong>UNASSIGNED</strong></font>
+                <form name=\"pidInfo\" method=\"post\" action=\"PidStatus.php\">
+                  <input type=\"hidden\" name=\"pidCnt\" value=\"".$x."\">
+                  <input type=\"hidden\" name=\"pidEnable\" value=\"pidEnable\">
+                  <input type=\"submit\" value=\"ENABLE\" disabled>
+                </form>
+               <form method=\"post\" action=\"plotPidData.php\">
+                 <input type=\"hidden\" name=\"pidGraphId\" value=\"".$x."\">
+                 <input type=\"submit\" value=\"PIDGRAPH\" disabled>
+               </form>";
+/*        $bodyStr .= "<font color=\"red\"><strong>
+                        <br \>Assign valid entries<br \>to enable.<br \>
+                     </strong></font><font size=\"-1\"><br ></font>";*/
+    }else{        
+      if($pidEnabledStr === "0")
+      {
+        $bodyStr .= 
+           "<font color=\"red\"><strong>DISABLED</strong></font>
+                <form name=\"pidInfo\" method=\"post\" action=\"PidStatus.php\">
+                  <input type=\"hidden\" name=\"pidCnt\" value=\"".$x."\">
+                  <input type=\"hidden\" name=\"pidEnable\" value=\"pidEnable\">
+                  <input type=\"submit\" value=\"ENABLE\">
+                </form>
+                <form method=\"post\" action=\"plotPidData.php\">
+                  <input type=\"hidden\" name=\"pidGraphId\" value=\"".$x."\">
+                  <input type=\"submit\" value=\"PIDGRAPH\" disabled>
+                </form>";
+       }else if($pidEnabledStr === "1"){
+        $bodyStr .= 
+          "<font color=\"green\"><strong>ENABLED</strong></font>
+                <form name=\"pidInfo\" method=\"post\" action=\"PidStatus.php\">
+                  <input type=\"hidden\" name=\"pidCnt\" value=\"".$x."\">
+                  <input type=\"hidden\" name=\"pidDisable\" value=\"pidDisable\">
+                  <input type=\"submit\" value=\"DISABLE\">
+                </form>
+                <form method=\"post\" action=\"plotPidData.php\">
+                  <input type=\"hidden\" name=\"pidGraphId\" value=\"".$x."\">
+                  <input type=\"submit\" value=\"PIDGRAPH\">
+                </form>";
+      }else{
+        $bodyStr .=
+          "<font color=\"yellow\"><strong>UNKNOWN = ".$pidEnabledStr."<br /></strong></font>";
+      }
     }
 
     $bodyStr .= 

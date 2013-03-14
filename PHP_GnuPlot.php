@@ -81,7 +81,7 @@ class PGData {
         global $tempDir, $IDCounter; 
         if (!$filename) { 
             // generate a file name 
-            $filename = 'data_'. ( $IDCounter++ ) .'.txt'; 
+            $filename = $tempDir.'/data_'. ( $IDCounter++ ) .'.txt'; 
             global $toRemove; 
             $toRemove[] = $filename; 
         } 
