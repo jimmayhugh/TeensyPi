@@ -89,6 +89,9 @@
               $result = mysqli_query($link, $dbClearStr);
               $dbClearStr = "UPDATE `chipNames` SET `address`='0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00',`name`='UNASSIGNED' WHERE 1";
               $result = mysqli_query($link, $dbClearStr);
+              $dbClearStr = "UPDATE `pid` SET `enabled`='0', `tempAddr`='0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00', `setpoint`='70', `switchAddr`='0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00', `kp`='0', `ki`='0', `kd`='0', `direction`='0', `windowSize`='5000' WHERE 1";
+              $result = mysqli_query($link, $dbClearStr);
+              
             }
           ?>
           <font color="red">

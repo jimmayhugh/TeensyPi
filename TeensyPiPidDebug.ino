@@ -2,8 +2,8 @@
 
 TeensyPi.ino
 
-Version 0.0.2
-Last Modified 03/14/2013
+Version 0.0.3
+Last Modified 03/15/2013
 By Jim Mayhugh
 
 
@@ -21,7 +21,7 @@ By Jim Mayhugh
   General Setup
 */
 
-const char* versionStr = "TeensyPi Version 0.0.2";
+const char* versionStr = "TeensyPi Version 0.0.3";
 
 uint8_t setDebug = 0x0;
 
@@ -1192,7 +1192,14 @@ void softSerialProcess()
               addrResultCnt++;
               addrResult = strtok( NULL, addrDelim );
             }
-            chipAddrCnt = matchChipAddress(addrVal);
+            
+            if(addrVal[0] == 0x0)
+            {
+              chipAddrCnt = maxChips+10;
+            }else{
+              chipAddrCnt = matchChipAddress(addrVal);
+            }
+            
             switch (actionSection)
             {
               case 1:
@@ -1327,6 +1334,7 @@ void softSerialProcess()
     case saveToEEPROM: // "F"
     {
       saveStructures();
+      Serial1.print(F("\0"));
       break;
     }
     
@@ -1334,10 +1342,10 @@ void softSerialProcess()
     {
       if(eepromReady == FALSE)
       {
-        Serial1.print(F("FALSE"));
+        Serial1.println(F("FALSE"));
       }else
       {
-        Serial1.print(F("TRUE"));
+        Serial1.println(F("TRUE"));
       }
       break;
     }
@@ -1361,6 +1369,7 @@ void softSerialProcess()
       // find new chips
       findChips();
       //EEPROM.write(EEPROMidAddr, 0);
+      Serial1.print(F("\0"));
       break;
     }
     
@@ -1375,6 +1384,7 @@ void softSerialProcess()
       {
         action[x].actionEnabled = FALSE;
       }
+      Serial1.print(F("\0"));
       break;
     }
     
