@@ -174,7 +174,7 @@
   $pTemp->plotData( $tcData, 'lines', '($2/3600):1','','ls 3');
 */ 
   $pTemp->setRange('y', $coldTest-1, $hotTest+1); 
-  $pTemp->export('/var/www/htdocs/pTemp.png');
+  $pTemp->export('/var/www/images/pTemp.png');
   $pTemp->close(); 
 ?>
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
@@ -355,7 +355,7 @@ input:focus, textarea:focus{background-color: lightgrey;}
       </tr>
       <tr>
         <td colspan="2" >
-          <img src="pTemp.png">
+          <img src="images/pTemp.png">
         </td>
       </tr>
       <tr>
