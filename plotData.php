@@ -198,7 +198,7 @@ input:focus, textarea:focus{background-color: lightgrey;}
       $result = mysqli_query($link, $query);
       $obj = mysqli_fetch_object($result);
       $startDateTime = $obj->time;
-      echo "startDateTime = ".date("Y m d H i", $startDateTime)."<br />";
+//      echo "startDateTime = ".date("Y m d H i", $startDateTime)."<br />";
       mysqli_free_result($result);
       mysqli_close($link);
     ?> 
@@ -245,12 +245,12 @@ input:focus, textarea:focus{background-color: lightgrey;}
                     <td>
                         Start:
                         <select name="startYear">
-                        <?php echo" <option value=\"".date("Y", startDateTime)."\">".date("Y", startDateTime)."\n"; ?>
+                        <?php echo" <option value=\"".date("Y", $startDateTime)."\">".date("Y", $startDateTime)."\n"; ?>
                           <option value="2012">2012</option>
                           <option value="2013">2013</option>
                         </select>
                         <select name="startMonth">
-                        <?php echo" <option value=\"".date("m", startDateTime)."\">".date("F", startDateTime)."</option>\n"; ?>
+                        <?php echo" <option value=\"".date("m", $startDateTime)."\">".date("F", $startDateTime)."</option>\n"; ?>
                           <option value="01">January</option>
                           <option value="02">February</option>
                           <option value="03">March</option>
@@ -266,7 +266,7 @@ input:focus, textarea:focus{background-color: lightgrey;}
                         </select>
                         <select name="startDay">
                         <?php
-                            echo"<option value=\"".date("d", startDateTime)."\">".date("d", startDateTime)."<option\n";
+                            echo"<option value=\"".date("d", $startDateTime)."\">".date("d", $startDateTime)."<option\n";
                             for($thisDay=1; $thisDay < 32; $thisDay++)
                             {
                               echo "\t\t\t  <option value=\"".$thisDay."\">".$thisDay."</option>\n";
@@ -275,7 +275,7 @@ input:focus, textarea:focus{background-color: lightgrey;}
                         </select>
                         <select name="startHour">
                           <?php
-                            echo"<option value=\"".date("H", startDateTime)."\">".date("H", startDateTime)."</option>\n";
+                            echo"<option value=\"".date("H", $startDateTime)."\">".date("H", $startDateTime)."</option>\n";
                             for($thisHour=0; $thisHour < 24; $thisHour++)
                             {
                               echo "\t\t\t  <option value=\"".$thisHour."\">".$thisHour."</option>\n";
@@ -284,7 +284,7 @@ input:focus, textarea:focus{background-color: lightgrey;}
                         </select>
                         <select name="startMinute">
                           <?php
-                            echo"<option value=\"".date("i", startDateTime)."\">".date("i", startDateTime)."</option>\n";
+                            echo"<option value=\"".date("i", $startDateTime)."\">".date("i", $startDateTime)."</option>\n";
                             for($thisMinute=0; $thisMinute < 60; $thisMinute++)
                             {
                               echo "\t\t\t  <option value=\"".$thisMinute."\">".$thisMinute."</option>\n";
