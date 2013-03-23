@@ -151,7 +151,7 @@
     $bodyStr .= 
         "<form method=\"post\" action=\"ActionDataWithMySQL.php\">
            <input type=\"hidden\" name=\"actionCnt\" value=\"".$x."\">
-           <input type=\"submit\" value=\"ASSIGN\">
+           <input type=\"submit\" value=\"MODIFY\">
          </form>";
     if($trimStr === "1")
     {
@@ -159,6 +159,12 @@
          "<form method=\"post\" action=\"plotData.php\">
            <input type=\"hidden\" name=\"graphId\" value=\"".$x."\">
            <input type=\"submit\" value=\"GRAPH\">
+         </form>";
+    }else{
+      $bodyStr.=
+         "<form method=\"post\" action=\"plotData.php\">
+           <input type=\"hidden\" name=\"graphId\" value=\"".$x."\">
+           <input type=\"submit\" value=\"GRAPH\" disabled>
          </form>";
     }
     $bodyStr .= 
