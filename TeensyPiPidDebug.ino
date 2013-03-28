@@ -2,7 +2,7 @@
 
 TeensyPi.ino
 
-Version 0.0.3
+Version 0.0.4
 Last Modified 03/15/2013
 By Jim Mayhugh
 
@@ -21,7 +21,7 @@ By Jim Mayhugh
   General Setup
 */
 
-const char* versionStr = "TeensyPi Version 0.0.3";
+const char* versionStr = "TeensyPi Version 0.0.4";
 
 uint8_t setDebug = 0x0;
 
@@ -1352,10 +1352,16 @@ void softSerialProcess()
     
     case getNewSensors: // "H"
     {
-      // turn off all switches
+      // turn off all switches and clear chip structures
       for(x=0; x<maxChips; x++)
       {
         setSwitch(x, ds2406PIOAoff);
+        for(int cAcnt = 0;cAcnt < 8; cAcnt++)
+        {
+          chip[x].chipAddr[cAcnt] = 0x00;
+        }
+        chip[x].chipStatus = 0;
+        chip[x].tempTimer = 0;
       }
       
       // disable and clear actions
