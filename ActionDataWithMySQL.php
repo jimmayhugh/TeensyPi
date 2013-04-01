@@ -32,6 +32,8 @@ select[type='text'] { font-size: 18px; text-align: center;}
             <?php
               include_once("accessDatabase.php");
               include_once("makeASocket.php");
+              include_once("killall.php");
+              include_once("startI2CLCD.php");
               $tempOptionStr="";
               $switchOptionStr="";
               $lcdOptionStr="<option value=\"32\">LCD0</option>
@@ -53,7 +55,7 @@ select[type='text'] { font-size: 18px; text-align: center;}
 	            socket_close($newSocket);
 	            // echo "eepromStatus = ".$eepromStatus."<br />";
                             
-              if($_POST["update"] === "update")
+              if(isset($_POST["update"]) && $_POST["update"] === "update")
               {
                 $tempAddrQuery = "select * from chipNames where name='".$_POST["tempAddress"]."'";
                 $tempAddrResult = mysqli_query($link, $tempAddrQuery);
@@ -111,11 +113,14 @@ select[type='text'] { font-size: 18px; text-align: center;}
                   echo "query failed";
                 }
 */
+                  killall("i2c_lcd");
+                  startI2CLCD("i2c_lcd");
+
 		            echo "<h2>Action Data Updated</h2>";
 		            mysql_free_result($tempAddrResult);
 		            mysql_free_result($tcAddrResult);
 		            mysql_free_result($thAddrResult);
-              }elseif($_POST["restoreall"] === "restoreall"){
+              }elseif(isset($_POST["restoreall"]) && $_POST["restoreall"] === "restoreall"){
           			 echo "<h2>All Action Data Restored</h2>";
                  $query = "SELECT * FROM action";
                  // echo "query = ".$query."<br />";
