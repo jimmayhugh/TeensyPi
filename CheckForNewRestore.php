@@ -85,11 +85,15 @@
           <?php
             if(isset($_POST["dbclear"]) && $_POST["dbclear"] === "dbclear")
             {
-              $dbClearStr = "UPDATE `action` SET `active`='0', `tempAddr`='0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00', `tcAddr`='0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00', `tcTrigger`='-255', `tcDelay`='0', `thAddr`='0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00', `thTrigger`='255', `thDelay`='0' WHERE 1";
+              $dbClearStr = "UPDATE `action` SET `active`='0', `tempAddr`='0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00', `tcAddr`='0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00', `tcTrigger`='-255', `tcDelay`='0', `thAddr`='0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00', `thTrigger`='255', `thDelay`='0', `lcd`='0', `rgb`='0' WHERE 1";
               $result = mysqli_query($link, $dbClearStr);
               $dbClearStr = "UPDATE `chipNames` SET `address`='0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00',`name`='UNASSIGNED' WHERE 1";
               $result = mysqli_query($link, $dbClearStr);
               $dbClearStr = "UPDATE `pid` SET `enabled`='0', `tempAddr`='0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00', `setpoint`='70', `switchAddr`='0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00', `kp`='0', `ki`='0', `kd`='0', `direction`='0', `windowSize`='5000' WHERE 1";
+              $result = mysqli_query($link, $dbClearStr);
+              $dbClearStr = "DELETE FROM `actionGraph` WHERE 1";
+              $result = mysqli_query($link, $dbClearStr);
+              $dbClearStr = "DELETE FROM `pidGraph` WHERE 1";
               $result = mysqli_query($link, $dbClearStr);
               
             }
