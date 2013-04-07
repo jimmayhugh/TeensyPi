@@ -68,10 +68,33 @@
                       </font>      
                     </td>
                     <td align="center">
-                      <form method="post" action="ActionStatus.php">
-                        <input type="hidden" name="restoreall" value="restoreall">
-                        <input type="submit" value="RESTORE ALL">
-                      </form>
+                      <?php
+                        $checkDBActiveStr = "SELECT * from `action` WHERE `tempAddr` != \"0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00\"";
+                        $result = mysqli_query($link, $checkDBActiveStr);
+                        $actionCnt = mysqli_num_rows($result);
+                        $checkDBActiveStr = "SELECT * from `pid` WHERE `tempAddr` != \"0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00\"";
+                        $result = mysqli_query($link, $checkDBActiveStr);
+                        $pidCnt = mysqli_num_rows($result);
+                        if(($pidCnt > 0) || ($actionCnt > 0))
+                        {
+                          $restoreAllStr = 
+                            "
+                              <form method=\"post\" action=\"ActionStatus.php\">
+                                <input type=\"hidden\" name=\"restoreall\" value=\"restoreall\">
+                                <input type=\"submit\" value=\"RESTORE ALL\">
+                              </form>
+                            ";
+                        }else{
+                          $restoreAllStr = 
+                            "
+                              <form method=\"post\" action=\"ActionStatus.php\">
+                                <input type=\"hidden\" name=\"restoreall\" value=\"restoreall\">
+                                <input type=\"submit\" value=\"RESTORE ALL\" disabled>
+                              </form>
+                            ";
+                        }
+                        echo $restoreAllStr;
+                      ?>
                     </td>
                   </tr>
                 </table>

@@ -29,6 +29,8 @@
     <?php 
       include_once("accessDatabase.php");
       include_once("makeASocket.php");
+      include_once("killall.php");
+      include_once("startI2CLCD.php");
       include_once("header.html");
     ?> 
     <!-- Table for Main Body -->
@@ -40,7 +42,7 @@
             if(isset($_POST["restoreall"]) && $_POST["restoreall"] === "restoreall")
             {
               $h2Str = "<h2>All Action Data Restored</h2>";
-              $query = "SELECT * FROM action";
+              $query = "SELECT * FROM action where `active`=1";
               // echo "query = ".$query."<br />";
               $result=mysqli_query($link,$query);
               /* 
@@ -83,7 +85,7 @@
 		          }
 		          mysqli_free_result($result);
 		          
-		          $query = "SELECT * from pid";
+		          $query = "SELECT * from pid where `enabled`=1";
               $result=mysqli_query($link,$query);
               while($obj = mysqli_fetch_object($result))
               {
@@ -105,7 +107,9 @@
 		          $out = socket_read($newSocket, $socBufSize);
 		          socket_close($newSocket);
 		          sleep(2);
-            }        
+            }
+            killall("i2c_lcd");
+            startI2CLCD("i2c_lcd");
           ?>
         </td>
       </tr>
