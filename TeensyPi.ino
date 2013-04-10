@@ -2,8 +2,8 @@
 
 TeensyPi.ino
 
-Version 0.0.7
-Last Modified 04/0/2013
+Version 0.0.8
+Last Modified 04/09/2013
 By Jim Mayhugh
 
 
@@ -21,16 +21,17 @@ By Jim Mayhugh
   General Setup
 */
 
-const char* versionStr = "TeensyPi Version 0.0.7, 04/07/2013";
+const char* versionStr = "TeensyPi Version 0.0.8, 04/09/2013";
 
 const uint8_t allDebug      = 0x01; 
 const uint8_t pidDebug      = 0x02; 
 const uint8_t eepromDebug   = 0x04; 
 const uint8_t chipDebug     = 0x08; 
 const uint8_t serial1Debug  = 0x10; 
-const uint8_t serialDebug   = 0x20; 
+const uint8_t serialDebug   = 0x20;
+const uint8_t crcDebug      = 0x40;
 
-uint8_t setDebug = 0x8;  
+uint8_t setDebug = 0x00;  
 
 // define serial commands
 
@@ -2029,20 +2030,61 @@ void showChipInfo(int x)
 
 void setSwitch(uint8_t x, uint8_t setChipState)
 {
+  uint16_t crc16Calc, crcChipReturn;
+  int chkCRC16 = 1;
   if(chip[x].chipAddr[0] == 0x12)
   {
-    ds.reset();
-    ds.select(chip[x].chipAddr);
-    ds.write(ds2406MemWr);
-    ds.write(ds2406AddLow);
-    ds.write(ds2406AddHi);
-    ds.write(setChipState);
-    for ( int i = 0; i < 6; i++)
+    while(chkCRC16)
     {
-      chipBuffer[i] = ds.read();
+      ds.reset();
+      ds.select(chip[x].chipAddr);
+      ds.write(ds2406MemWr);
+      chipBuffer[0] = ds2406MemWr;
+      ds.write(ds2406AddLow);
+      chipBuffer[1] = ds2406AddLow;
+      ds.write(ds2406AddHi);
+      chipBuffer[2] = ds2406AddHi;
+      ds.write(setChipState);
+      chipBuffer[3] = setChipState;
+      for ( int i = 4; i < 6; i++)
+      {
+        chipBuffer[i] = ds.read();
+      }
+      ds.write(ds2406End);
+      ds.reset();
+
+      chkCRC16 = !(ds.check_crc16(chipBuffer, 4, (uint8_t *) &chipBuffer[4]));
+
+      if((setDebug & chipDebug) || (setDebug & crcDebug) || (setDebug & allDebug))
+      {
+        crc16Calc = ds.crc16(chipBuffer, 4);
+        crcChipReturn = ~(chipBuffer[5] << 8 | chipBuffer[4]);
+        Serial.print(F("setSwitch chip "));
+        Serial.print(x);
+        Serial.print(F(", chipBuffer = { "));
+        for(int i = 0; i < 6; i++)
+        {
+          Serial.print(F("0X"));
+          if(chipBuffer[i] >= 0 || chipBuffer[i] <= 15) Serial.print(F("0"));
+          Serial.print(chipBuffer[i],HEX);
+          if(i < 12) Serial.print(F(","));
+        }
+        Serial.println(F(" }"));
+        Serial.print(F("setSwitch crc16Calc = 0X"));
+        Serial.print(crc16Calc, HEX);
+        Serial.print(F(", Chip"));
+        Serial.print(x);
+        Serial.print(F(" crc = 0X"));
+        Serial.println(crcChipReturn, HEX);
+
+        if(chkCRC16)
+        {
+          Serial.println(F("check_crc16 failed"));
+        }else{
+          Serial.println(F("check_crc16 passed"));
+        }
+      }
     }
-    ds.write(ds2406End);
-    ds.reset();
     updateChipStatus(x);
   }
 }
@@ -2089,7 +2131,7 @@ void updateChipStatus(int x)
         
         if(ds.crc8(chipBuffer, 8) != chipBuffer[8])
         {
-          if((setDebug & chipDebug) || (setDebug & allDebug))
+          if((setDebug & chipDebug) || (setDebug & crcDebug) || (setDebug & allDebug))
           {
             Serial.print(F("chip "));
             Serial.print(x);
@@ -2138,23 +2180,29 @@ void updateChipStatus(int x)
           }
         }
         ds.reset();
-/*  
-        Serial.print(F("chipBuffer = { "));
-        for(int i = 0; i < 13; i++)
+        
+        if((setDebug & chipDebug) || (setDebug & crcDebug) || (setDebug & allDebug))
         {
-          Serial.print(F("0X"));
-          if(chipBuffer[i] >= 0 || chipBuffer[i] <= 15) Serial.print(F("0"));
-          Serial.print(chipBuffer[i],HEX);
-          if(i < 12) Serial.print(F(","));
+          Serial.print(F("updateChipStatus, chip "));
+          Serial.print(x);
+          Serial.print(F(", chipBuffer = { "));
+          for(int i = 0; i < 13; i++)
+          {
+            Serial.print(F("0X"));
+            if(chipBuffer[i] >= 0 || chipBuffer[i] <= 15) Serial.print(F("0"));
+            Serial.print(chipBuffer[i],HEX);
+            if(i < 12) Serial.print(F(","));
+          }
+          Serial.println(F(" }"));
         }
-        Serial.println(F(" }"));
-*/        
+        
         chipBufferCRC = (chipBuffer[12] << 8) | chipBuffer[11];
         
         cbCalcCRC = ds.crc16(chipBuffer, 11);
+
         noCRCmatch = ds.check_crc16(chipBuffer, 11, (uint8_t *) &chipBuffer[10]);
         
-        if((setDebug & chipDebug) || (setDebug & allDebug))
+        if((setDebug & chipDebug) || (setDebug & crcDebug) || (setDebug & allDebug))
         {
           if(noCRCmatch)
           {
