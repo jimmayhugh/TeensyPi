@@ -2,9 +2,35 @@
 
 TeensyPi.ino
 
-Version 0.0.7
-Last Modified 05/04/2013
+Version 0.0.12tc
+Last Modified 07/28/2013
 By Jim Mayhugh
+
+Used with TeensyPi Rev 0.0.10 pc board
+
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+"Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+This software uses multiple libraries that are subject to additional
+licenses as defined by the author of that software. It is the user's
+and developer's responsibility to determine and adhere to any additional
+requirements that may arise.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
 *********************/
@@ -12,6 +38,7 @@ By Jim Mayhugh
 #include <math.h>
 #include <EEPROM.h>
 #include "EEPROMAnything.h"
+#include "Adafruit_MAX31855.h"
 #include <OneWire.h>
 #include <errno.h>
 
@@ -21,30 +48,32 @@ By Jim Mayhugh
   General Setup
 */
 
-const char* versionStr = "TeensyPi Version 0.0.7, 05/04/2013";
+const char* versionStr = "TeensyPi with Thermocouple Version 0.0.12tc, 07/28/2013";
 
-const uint8_t allDebug      = 0x01; 
-const uint8_t pidDebug      = 0x02; 
-const uint8_t eepromDebug   = 0x04; 
-const uint8_t chipDebug     = 0x08; 
-const uint8_t serial1Debug  = 0x10; 
-const uint8_t serialDebug   = 0x20; 
+const uint8_t allDebug       = 0x01; 
+const uint8_t pidDebug       = 0x02; 
+const uint8_t eepromDebug    = 0x04; 
+const uint8_t chipDebug      = 0x08; 
+const uint8_t serial1Debug   = 0x10; 
+const uint8_t serialDebug    = 0x20; 
+const uint8_t tcProbeDebug   = 0x40;
+const uint8_t ds2762Debug    = 0x80;
 
-uint8_t setDebug = 0x0;  
+uint16_t setDebug = 0x0;  
 
 // define serial commands
 
 const uint8_t getMaxChips        = '1';
-const uint8_t showChip           = getMaxChips + 1;
-const uint8_t getChipCount       = showChip + 1;
-const uint8_t getChipAddress     = getChipCount + 1;
-const uint8_t getChipStatus      = getChipAddress + 1;
-const uint8_t setSwitchState     = getChipStatus + 1;
-const uint8_t getAllStatus       = setSwitchState + 1;
-const uint8_t getChipType        = getAllStatus + 1;
-const uint8_t getAllChips        = getChipType + 1; // last in this series
+const uint8_t showChip           = getMaxChips + 1;       // "2"
+const uint8_t getChipCount       = showChip + 1;          // "3"
+const uint8_t getChipAddress     = getChipCount + 1;      // "4"
+const uint8_t getChipStatus      = getChipAddress + 1;    // "5"
+const uint8_t setSwitchState     = getChipStatus + 1;     // "6"
+const uint8_t getAllStatus       = setSwitchState + 1;    // "7"
+const uint8_t getChipType        = getAllStatus + 1;      // "8"
+const uint8_t getAllChips        = getChipType + 1;       // "9" last in this series
 
-const uint8_t getActionArray     = 'A'; // start of new serial command list
+const uint8_t getActionArray     = 'A';                   // "A" start of new serial command list
 const uint8_t updateActionArray  = getActionArray + 1;    // "B"
 const uint8_t getActionStatus    = updateActionArray + 1; // "C"
 const uint8_t getMaxActions      = getActionStatus + 1;   // "D"
@@ -61,6 +90,7 @@ const uint8_t getPidArray        = updatePidArray + 1;    // "N"
 const uint8_t setPidArray        = getPidArray + 1;       // "O"
 const uint8_t useDebug           = setPidArray + 1;       // "P"
 const uint8_t restoreStructures  = useDebug + 1;          // "Q"
+const uint8_t readMX             = restoreStructures + 1; // "R"
 
 const uint8_t versionID          = 'z';
 
@@ -89,11 +119,12 @@ uint8_t setChipState;
 uint8_t *chipAddrPtr;
 bool serialMessageReady = FALSE;
 bool actionPtrMatch = FALSE;
-bool showCelcius = FALSE;
+bool showCelsius = FALSE;
 
-uint32_t timer, timer2;
+uint32_t timer, timer2, mxTimer, startTime, endTime;
 const uint32_t updateTime = 250;
 const uint32_t ramUpdateTime = 10000;
+const uint32_t ds2762UpdateTime = 500;
 
 // OneWire Setup;
 const uint8_t oneWireAddress = 9; // OneWire Bus Address
@@ -107,6 +138,8 @@ const uint8_t ds2406PIOAon   = 0x1f;
 const uint8_t ds2406End      = 0xff;
 const uint8_t ds18b20ID      = 0x28;
 const uint8_t ds2406ID       = 0x12;
+const uint8_t ds2762ID       = 0x30;
+const uint8_t dsT31855ID     = 0xAA;
 const uint8_t dsPIO_A        = 0x20;
 const uint8_t dsPIO_B        = 0x40;
 
@@ -114,6 +147,155 @@ const uint8_t maxChips       = 36; // Maximum number of Chips
 const uint8_t maxActions     = 12; // Maximum number of Actions
 
 OneWire  ds(oneWireAddress);
+
+// DS2762 oneWire conversion table - K-Type Thermocouple
+
+const uint16_t kNegTableCnt = 271;
+PROGMEM prog_uint16_t kNegTable[kNegTableCnt] =
+{
+ /*       --0--  --1--  --2--  --3--  --4--  --5--  --6--  --7--  --8--  --9-- */
+ /*   0*/     0,    39,    79,   118,   157,   197,   236,   275,   314,   353,
+ /* -10*/   392,   431,   470,   508,   547,   586,   624,   663,   701,   739,
+ /* -20*/   778,   816,   854,   892,   930,   968,  1006,  1043,  1081,  1119,
+ /* -30*/  1156,  1194,  1231,  1268,  1305,  1343,  1380,  1417,  1453,  1490,
+ /* -40*/  1527,  1564,  1600,  1637,  1673,  1709,  1745,  1782,  1818,  1854,
+ /* -50*/  1889,  1925,  1961,  1996,  2032,  2067,  2103,  2138,  2173,  2208,
+ /* -60*/  2243,  2278,  2312,  2347,  2382,  2416,  2450,  2485,  2519,  2553,
+ /* -70*/  2587,  2620,  2654,  2688,  2721,  2755,  2788,  2821,  2854,  2887,
+ /* -80*/  2920,  2953,  2986,  3018,  3050,  3083,  3115,  3147,  3179,  3211,
+ /* -90*/  3243,  3274,  3306,  3337,  3368,  3400,  3431,  3462,  3492,  3523,
+ /*-100*/  3554,  3584,  3614,  3645,  3675,  3705,  3734,  3764,  3794,  3823,
+ /*-110*/  3852,  3882,  3911,  3939,  3968,  3997,  4025,  4054,  4082,  4110,
+ /*-120*/  4138,  4166,  4194,  4221,  4249,  4276,  4303,  4330,  4357,  4384,
+ /*-130*/  4411,  4437,  4463,  4490,  4516,  4542,  4567,  4593,  4618,  4644,
+ /*-140*/  4669,  4694,  4719,  4744,  4768,  4793,  4817,  4841,  4865,  4889,
+ /*-150*/  4913,  4936,  4960,  4983,  5006,  5029,  5052,  5074,  5097,  5119,
+ /*-160*/  5141,  5163,  5185,  5207,  5228,  5250,  5271,  5292,  5313,  5333,
+ /*-170*/  5354,  5374,  5395,  5415,  5435,  5454,  5474,  5493,  5512,  5531,
+ /*-180*/  5550,  5569,  5588,  5606,  5624,  5642,  5660,  5678,  5695,  5713,
+ /*-190*/  5730,  5747,  5763,  5780,  5797,  5813,  5829,  5845,  5861,  5876,
+ /*-200*/  5891,  5907,  5922,  5936,  5951,  5965,  5980,  5994,  6007,  6021,
+ /*-210*/  6035,  6048,  6061,  6074,  6087,  6099,  6111,  6123,  6135,  6147,
+ /*-220*/  6158,  6170,  6181,  6192,  6202,  6213,  6223,  6233,  6243,  6252,
+ /*-230*/  6262,  6271,  6280,  6289,  6297,  6306,  6314,  6322,  6329,  6337,
+ /*-240*/  6344,  6351,  6358,  6364,  6370,  6377,  6382,  6388,  6393,  6399,
+ /*-250*/  6404,  6408,  6413,  6417,  6421,  6425,  6429,  6432,  6435,  6438,
+ /*-260*/  6411,  6444,  6446,  6448,  6450,  6452,  6453,  6455,  6456,  6457,
+ /*-270*/  6458
+};
+
+const uint16_t kTableCnt = 1024;
+PROGMEM prog_uint16_t kTable[kTableCnt] =
+{
+  /*       --0--  --1--  --2--  --3--  --4--  --5--  --6--  --7--  --8--  --9-- */
+  /*0000*/     0,    39,    79,   119,   158,   198,   238,   277,   317,   357,
+  /*0010*/   397,   437,   477,   517,   557,   597,   637,   677,   718,   758,
+  /*0020*/   798,   838,   879,   919,   960,  1000,  1040,  1080,  1122,  1163,
+  /*0030*/  1203,  1244,  1284,  1326,  1366,  1407,  1448,  1489,  1530,  1570,
+  /*0040*/  1612,  1653,  1694,  1735,  1776,  1816,  1858,  1899,  1941,  1982,
+  /*0050*/  2023,  2064,  2105,  2146,  2188,  2230,  2270,  2311,  2354,  2395,
+  /*0060*/  2436,  2478,  2519,  2560,  2601,  2644,  2685,  2726,  2767,  2810,
+  /*0070*/  2850,  2892,  2934,  2976,  3016,  3059,  3100,  3141,  3184,  3225,
+  /*0080*/  3266,  3307,  3350,  3391,  3432,  3474,  3516,  3557,  3599,  3640,
+  /*0090*/  3681,  3722,  3765,  3806,  3847,  3888,  3931,  3972,  4012,  4054,
+  /*0100*/  4096,  4137,  4179,  4219,  4261,  4303,  4344,  4384,  4426,  4468,
+  /*0110*/  4509,  4549,  4591,  4633,  4674,  4714,  4756,  4796,  4838,  4878,
+  /*0120*/  4919,  4961,  5001,  5043,  5083,  5123,  5165,  5206,  5246,  5288,
+  /*0130*/  5328,  5368,  5410,  5450,  5490,  5532,  5572,  5613,  5652,  5693,
+  /*0140*/  5735,  5775,  5815,  5865,  5895,  5937,  5977,  6017,  6057,  6097,
+  /*0150*/  6137,  6179,  6219,  6259,  6299,  6339,  6379,  6419,  6459,  6500,
+  /*0160*/  6540,  6580,  6620,  6660,  6700,  6740,  6780,  6820,  6860,  6900,
+  /*0170*/  6940,  6980,  7020,  7059,  7099,  7139,  7179,  7219,  7259,  7299,
+  /*0180*/  7339,  7379,  7420,  7459,  7500,  7540,  7578,  7618,  7658,  7698,
+  /*0190*/  7738,  7778,  7819,  7859,  7899,  7939,  7979,  8019,  8058,  8099,
+  /*0200*/  8137,  8178,  8217,  8257,  8298,  8337,  8378,  8417,  8458,  8499,
+  /*0210*/  8538,  8579,  8618,  8659,  8698,  8739,  8778,  8819,  8859,  8900,
+  /*0220*/  8939,  8980,  9019,  9060,  9101,  9141,  9180,  9221,  9262,  9301,
+  /*0230*/  9343,  9382,  9423,  9464,  9503,  9544,  9585,  9625,  9666,  9707,
+  /*0240*/  9746,  9788,  9827,  9868,  9909,  9949,  9990, 10031, 10071, 10112,
+  /*0250*/ 10153, 10194, 10234, 10275, 10316, 10356, 10397, 10439, 10480, 10519,
+  /*0260*/ 10560, 10602, 10643, 10683, 10724, 10766, 10807, 10848, 10888, 10929,
+  /*0270*/ 10971, 11012, 11053, 11093, 11134, 11176, 11217, 11259, 11300, 11340,
+  /*0280*/ 11381, 11423, 11464, 11506, 11547, 11587, 11630, 11670, 11711, 11753,
+  /*0290*/ 11794, 11836, 11877, 11919, 11960, 12001, 12043, 12084, 12126, 12167,
+  /*0300*/ 12208, 12250, 12291, 12333, 12374, 12416, 12457, 12499, 12539, 12582,
+  /*0310*/ 12624, 12664, 12707, 12747, 12789, 12830, 12872, 12914, 12955, 12997,
+  /*0320*/ 13039, 13060, 13122, 13164, 13205, 13247, 13289, 13330, 13372, 13414,
+  /*0330*/ 13457, 13497, 13539, 13582, 13624, 13664, 13707, 13749, 13791, 13833,
+  /*0340*/ 13874, 13916, 13958, 14000, 14041, 14083, 14125, 14166, 14208, 14250,
+  /*0350*/ 14292, 14335, 14377, 14419, 14461, 14503, 14545, 14586, 14628, 14670,
+  /*0360*/ 14712, 14755, 14797, 14839, 14881, 14923, 14964, 15006, 15048, 15090,
+  /*0370*/ 15132, 15175, 15217, 15259, 15301, 15343, 15384, 15426, 15468, 15510,
+  /*0380*/ 15554, 15596, 15637, 15679, 15721, 15763, 15805, 15849, 15891, 15932,
+  /*0390*/ 15974, 16016, 16059, 16102, 16143, 16185, 16228, 16269, 16312, 16355,
+  /*0400*/ 16396, 16439, 16481, 16524, 16565, 16608, 16650, 16693, 16734, 16777,
+  /*0410*/ 16820, 16861, 16903, 16946, 16989, 17030, 17074, 17115, 17158, 17201,
+  /*0420*/ 17242, 17285, 17327, 17370, 17413, 17454, 17496, 17539, 17582, 17623,
+  /*0430*/ 17667, 17708, 17751, 17794, 17836, 17879, 17920, 17963, 18006, 18048,
+  /*0440*/ 18091, 18134, 18176, 18217, 18260, 18303, 18346, 18388, 18431, 18472,
+  /*0450*/ 18515, 18557, 18600, 18643, 18686, 18728, 18771, 18812, 18856, 18897,
+  /*0460*/ 18940, 18983, 19025, 19068, 19111, 19153, 19196, 19239, 19280, 19324,
+  /*0470*/ 19365, 19408, 19451, 19493, 19536, 19579, 19621, 19664, 19707, 19750,
+  /*0480*/ 19792, 19835, 19876, 19920, 19961, 20004, 20047, 20089, 20132, 20175,
+  /*0490*/ 20218, 20260, 20303, 20346, 20388, 20431, 20474, 20515, 20559, 20602,
+  /*0500*/ 20643, 20687, 20730, 20771, 20815, 20856, 20899, 20943, 20984, 21027,
+  /*0510*/ 21071, 21112, 21155, 21199, 21240, 21283, 21326, 21368, 21411, 21454,
+  /*0520*/ 21497, 21540, 21582, 21625, 21668, 21710, 21753, 21795, 21838, 21881,
+  /*0530*/ 21923, 21966, 22009, 22051, 22094, 22137, 22178, 22222, 22265, 22306,
+  /*0540*/ 22350, 22393, 22434, 22478, 22521, 22562, 22606, 22649, 22690, 22734,
+  /*0550*/ 22775, 22818, 22861, 22903, 22946, 22989, 23032, 23074, 23117, 23160,
+  /*0560*/ 23202, 23245, 23288, 23330, 23373, 23416, 23457, 23501, 23544, 23585,
+  /*0570*/ 23629, 23670, 23713, 23757, 23798, 23841, 23884, 23926, 23969, 24012,
+  /*0580*/ 24054, 24097, 24140, 24181, 24225, 24266, 24309, 24353, 24394, 24437,
+  /*0590*/ 24480, 24523, 24565, 24608, 24650, 24693, 24735, 24777, 24820, 24863,
+  /*0600*/ 24905, 24948, 24990, 25033, 25075, 25118, 25160, 25203, 25245, 25288,
+  /*0610*/ 25329, 25373, 25414, 25457, 25500, 25542, 25585, 25626, 25670, 25711,
+  /*0620*/ 25755, 25797, 25840, 25882, 25924, 25967, 26009, 26052, 26094, 26136,
+  /*0630*/ 26178, 26221, 26263, 26306, 26347, 26390, 26432, 26475, 26516, 26559,
+  /*0640*/ 26602, 26643, 26687, 26728, 26771, 26814, 26856, 26897, 26940, 26983,
+  /*0650*/ 27024, 27067, 27109, 27152, 27193, 27236, 27277, 27320, 27362, 27405,
+  /*0660*/ 27447, 27489, 27531, 27574, 27616, 27658, 27700, 27742, 27784, 27826,
+  /*0670*/ 27868, 27911, 27952, 27995, 28036, 28079, 28120, 28163, 28204, 28246,
+  /*0680*/ 28289, 28332, 28373, 28416, 28416, 28457, 28500, 28583, 28626, 28667,
+  /*0690*/ 28710, 28752, 28794, 28835, 28877, 28919, 28961, 29003, 29045, 29087,
+  /*0700*/ 29129, 29170, 29213, 29254, 29297, 29338, 29379, 29422, 29463, 29506,
+  /*0710*/ 29548, 29589, 29631, 29673, 29715, 29757, 29798, 29840, 29882, 29923,
+  /*0720*/ 29964, 30007, 30048, 30089, 30132, 30173, 30214, 30257, 30298, 30341,
+  /*0730*/ 30382, 30423, 30466, 30507, 30548, 30589, 30632, 30673, 30714, 30757,
+  /*0740*/ 30797, 30839, 30881, 30922, 30963, 31006, 31047, 31088, 31129, 31172,
+  /*0750*/ 31213, 31254, 31295, 31338, 31379, 31420, 31461, 31504, 31545, 31585,
+  /*0760*/ 31628, 31669, 31710, 31751, 31792, 31833, 31876, 31917, 31957, 32000,
+  /*0770*/ 32040, 32082, 32124, 32164, 32206, 32246, 32289, 32329, 32371, 32411,
+  /*0780*/ 32453, 32495, 32536, 32577, 32618, 32659, 32700, 32742, 32783, 32824,
+  /*0790*/ 32865, 32905, 32947, 32987, 33029, 33070, 33110, 33152, 33192, 33234,
+  /*0800*/ 33274, 33316, 33356, 33398, 33439, 33479, 33521, 33561, 33603, 33643,
+  /*0810*/ 33685, 33725, 33767, 33807, 33847, 33889, 33929, 33970, 34012, 34052,
+  /*0820*/ 34093, 34134, 34174, 34216, 34256, 34296, 34338, 34378, 34420, 34460,
+  /*0830*/ 34500, 34542, 34582, 34622, 34664, 34704, 34744, 34786, 34826, 34866,
+  /*0840*/ 34908, 34948, 34999, 35029, 35070, 35109, 35151, 35192, 35231, 35273,
+  /*0850*/ 35313, 35353, 35393, 35435, 35475, 35515, 35555, 35595, 35637, 35676,
+  /*0860*/ 35718, 35758, 35798, 35839, 35879, 35920, 35960, 36000, 36041, 36081,
+  /*0870*/ 36121, 36162, 36202, 36242, 36282, 36323, 36363, 36403, 36443, 36484,
+  /*0880*/ 36524, 36564, 36603, 36643, 36685, 36725, 36765, 36804, 36844, 36886,
+  /*0890*/ 36924, 36965, 37006, 37045, 37085, 37125, 37165, 37206, 37246, 37286,
+  /*0900*/ 37326, 37366, 37406, 37446, 37486, 37526, 37566, 37606, 37646, 37686,
+  /*0910*/ 37725, 37765, 37805, 37845, 37885, 37925, 37965, 38005, 38044, 38084,
+  /*0920*/ 38124, 38164, 38204, 38243, 38283, 38323, 38363, 38402, 38442, 38482,
+  /*0930*/ 38521, 38561, 38600, 38640, 38679, 38719, 38759, 38798, 38838, 38878,
+  /*0940*/ 38917, 38957, 38996, 39036, 39076, 39115, 39164, 39195, 39234, 39274,
+  /*0950*/ 39314, 39353, 39393, 39432, 39470, 39511, 39549, 39590, 39628, 39668,
+  /*0960*/ 39707, 39746, 39786, 39826, 39865, 39905, 39944, 39984, 40023, 40061,
+  /*0970*/ 40100, 40140, 40179, 40219, 40259, 40298, 40337, 40375, 40414, 40454,
+  /*0980*/ 40493, 40533, 40572, 40610, 40651, 40689, 40728, 40765, 40807, 40846,
+  /*0990*/ 40885, 40924, 40963, 41002, 41042, 41081, 41119, 41158, 41198, 41237,
+  /*1000*/ 41276, 41315, 41354, 41393, 41431, 41470, 41509, 41548, 41587, 41626,
+  /*1010*/ 41665, 41704, 41743, 41781, 41820, 41859, 41898, 41937, 41976, 42014,
+  /*1020*/ 42053, 42092, 42131, 42169
+};
+uint8_t addr[8], voltage[2], cjTemp[2], error, sign, i;
+int16_t tcVoltage, cjTemperature, tblLo, eePntr, tempC, cjComp;
+uint16_t tcBuff, tblHi, testVal;
+
 
 const uint32_t tempReadDelay = 125;
 
@@ -246,7 +428,7 @@ PID PID5(&ePID[5].pidInput,   &ePID[5].pidOutput,  &ePID[5].pidSetPoint,  (doubl
 PID PID6(&ePID[6].pidInput,   &ePID[6].pidOutput,  &ePID[6].pidSetPoint,  (double) ePID[6].pidKp,  (double) ePID[6].pidKi,  (double) ePID[6].pidKd,  ePID[6].pidDirection);
 PID PID7(&ePID[7].pidInput,   &ePID[7].pidOutput,  &ePID[7].pidSetPoint,  (double) ePID[7].pidKp,  (double) ePID[7].pidKi,  (double) ePID[7].pidKd,  ePID[7].pidDirection);
 
-PID *pidArrayPtr[] = {&PID0,&PID1,&PID2,&PID3,&PID4,&PID5,&PID6,&PID7};
+PID *pidArrayPtr[maxPIDs] = {&PID0,&PID1,&PID2,&PID3,&PID4,&PID5,&PID6,&PID7};
 
 // End PID Stuff
 
@@ -257,7 +439,47 @@ const int   EEPROMccAddr     = 0x20;   // number of chips found during findchips
 const int   EEPROMchipAddr   = 0x40;  // start address of structures
 const byte  EEPROMidVal      = 0x55;   // Shows that an EEPROM update has occurred 
 bool        eepromReady      = FALSE;
-int         eepromSpace, eeResult, EEPROMactionAddr, EEPROMpidAddr;
+int         eepromSpace, eeResult, EEPROMactionAddr, EEPROMpidAddr, EEPROMtcAddr;
+
+
+// Adafruit MAX31855K Thermocouple Module Stuff
+
+const int maxMX = 4;
+
+typedef struct
+{
+  bool mxEnabled;
+  double mxTemp;
+}chipMXstruct;
+
+chipMXstruct eMX[maxMX]=
+{
+  { FALSE, 3000.0 },
+  { FALSE, 3000.0 },
+  { FALSE, 3000.0 },
+  { FALSE, 3000.0 }
+};
+
+uint8_t mxCnt = 0;
+
+// Multiple MAX31855K Modules may be used by paralleling mxClk and mxDO, and having separate
+// mxCSx lines
+const int mxDO  = 2;
+const int mxCLK = 3;
+const int mxCS0 = 4;
+const int mxCS1 = 5;
+const int mxCS2 = 6;
+const int mxCS3 = 7;
+
+// Initialize the Thermocouple
+Adafruit_MAX31855 eMX0(mxCLK, mxCS0, mxDO);
+Adafruit_MAX31855 eMX1(mxCLK, mxCS1, mxDO);
+Adafruit_MAX31855 eMX2(mxCLK, mxCS2, mxDO);
+Adafruit_MAX31855 eMX3(mxCLK, mxCS3, mxDO);
+
+Adafruit_MAX31855 *mxArrayPtr[maxMX] = {&eMX0, &eMX1, &eMX2, &eMX3};
+
+
 
 void setup()
 {
@@ -276,6 +498,17 @@ void setup()
   Serial.print(F("Serial Debug running at "));
   Serial.print(baudRate);
   Serial.println(F(" baud"));
+
+/*
+  for(uint16_t i = 1010; i < kTableCnt; i++)
+    {
+      Serial.print(F("kTable["));
+      Serial.print(i);
+      Serial.print(F("] = "));
+      Serial.println(pgm_read_word_near(kTable + i));
+      delay(500);
+    }
+*/
 
 
   eeResult = EEPROM.read(EEPROMidAddr);
@@ -296,6 +529,29 @@ void setup()
     eepromReady = FALSE;
     findChips();
     saveStructures();
+    
+    if((setDebug & eepromDebug) || (setDebug & allDebug))
+    { 
+      Serial.println(F("Getting EEPROM Data"));
+    }
+
+    chipCnt = EEPROM.read(EEPROMccAddr);
+
+    if((setDebug & eepromDebug) || (setDebug & allDebug))
+    { 
+      Serial.print(F("Getting chipCnt - "));
+      Serial.print(chipCnt);
+      Serial.println(F(" chips found."));
+    }
+
+    readStructures();
+    if((setDebug & eepromDebug) || (setDebug & allDebug))
+    { 
+      Serial.println(F("EEPROM Data Read Completed"));
+    }
+  
+    eepromReady = TRUE;
+    
   }else{
 
     if((setDebug & eepromDebug) || (setDebug & allDebug))
@@ -304,6 +560,14 @@ void setup()
     }
 
     chipCnt = EEPROM.read(EEPROMccAddr);
+
+    if((setDebug & eepromDebug) || (setDebug & allDebug))
+    { 
+      Serial.print(F("Getting chipCnt - "));
+      Serial.print(chipCnt);
+      Serial.println(F(" chips found."));
+    }
+
     readStructures();
     if((setDebug & eepromDebug) || (setDebug & allDebug))
     { 
@@ -322,6 +586,8 @@ void setup()
     Serial.println(F(" bytes in action structure array"));
     Serial.print( (sizeof(chipPIDStruct) / sizeof(byte) ) *maxPIDs);
     Serial.println(F(" bytes in pid structure Array"));
+    Serial.print( (sizeof(chipMXstruct) / sizeof(byte) ) *maxMX);
+    Serial.println(F(" bytes in tc structure Array"));
   }
 
   Serial1.begin(baudRate);
@@ -331,12 +597,49 @@ void setup()
   digitalWrite(waitPin, HIGH);
   digitalWrite(waitLED, HIGH);
   timer = millis();
+  mxTimer = millis();
   timer2 = millis();
   
   pidSetup();
 }
 
 void loop()
+{
+  if(timer > (millis() + 5000)) // in case of rollover
+  {
+    timer = millis();
+  }
+
+  checkForSerialMessage();
+  
+  updateChipStatus(chipX);
+  chipX++;
+  if(chipX >= maxChips){chipX = 0;}
+  
+  checkForSerialMessage();
+  
+  updateActions(actionsCnt);    
+  actionsCnt++;
+  if(actionsCnt >= maxActions){actionsCnt = 0;}
+
+  checkForSerialMessage();
+  
+  updatePIDs(pidCnt);
+  pidCnt++;
+  if(pidCnt >= maxPIDs){pidCnt = 0;}
+
+  checkForSerialMessage();
+ 
+  if(millis() > mxTimer + updateTime)
+  {
+    updateMX(mxCnt);
+    mxCnt++;
+    if(mxCnt >= maxMX){mxCnt = 0;}
+    mxTimer = millis();
+  }
+}
+
+void checkForSerialMessage(void)
 {
   while(Serial1.available())
   { 
@@ -378,36 +681,6 @@ void loop()
     
     softSerialProcess();
   }
-  
-  if(timer > (millis() + 5000)) // in case of rollover
-  {
-    timer = millis();
-  }
-  
-  if(millis() > (timer + 125))
-  {
-    updateChipStatus(chipX);
-    chipX++;
-    if(chipX >= maxChips){chipX = 0;}
-    timer = millis();
-  
-    updateActions(actionsCnt);    
-    actionsCnt++;
-    if(actionsCnt >= maxActions){actionsCnt = 0;}
-
-    updatePIDs(pidCnt);
-    pidCnt++;
-    if(pidCnt >= maxPIDs){pidCnt = 0;}
-  }
-
-/*  
-  if(millis() > (timer2 + ramUpdateTime))
-  {
-    Serial.print(freeMemory());
-    Serial.println(F(" Available"));
-    timer2 = millis();
-  }
-*/
 }
 
 void pidSetup(void)
@@ -476,7 +749,7 @@ void readStructures(void)
     Serial.println(EEPROMchipAddr, HEX);
   }
 
-  EEPROMactionAddr = (eeResult + EEPROMchipAddr + 0x10) & 0xFFFF0;
+  EEPROMactionAddr = eeResult + EEPROMchipAddr + 0x01;
 
   if((setDebug & eepromDebug) || (setDebug & allDebug))
   {
@@ -496,7 +769,7 @@ void readStructures(void)
     Serial.println(EEPROMactionAddr, HEX);
   }
 
-  EEPROMpidAddr =  (EEPROMactionAddr + eeResult + 0x10) & 0xFFFF0;
+  EEPROMpidAddr =  EEPROMactionAddr + eeResult + 0x01;
 
   if((setDebug & eepromDebug) || (setDebug & allDebug))
   {
@@ -513,6 +786,26 @@ void readStructures(void)
     Serial.print(F("Read "));
     Serial.print(eeResult);
     Serial.print(F(" bytes from address Ox"));
+    Serial.println(EEPROMchipAddr, HEX);
+  }
+
+  EEPROMtcAddr = eeResult + EEPROMpidAddr + 0x01;
+
+  if((setDebug & eepromDebug) || (setDebug & allDebug))
+  {
+    Serial.print(F("EEPROMtcAddr = 0x"));
+    Serial.println(EEPROMtcAddr, HEX);
+  }
+
+  eeResult = EEPROM_readAnything(EEPROMtcAddr, eMX);
+
+  eepromSpace += eeResult;
+
+  if((setDebug & eepromDebug) || (setDebug & allDebug))
+  {
+    Serial.print(F("Read "));
+    Serial.print(eeResult);
+    Serial.print(F(" bytes from address Ox"));
     Serial.println(EEPROMpidAddr, HEX);
     Serial.print(F("readStructures() EEPROM Data Read of "));
     Serial.print(eepromSpace);
@@ -521,6 +814,7 @@ void readStructures(void)
     displayStructure((byte *)(uint32_t) &chip, sizeof(chip));
     displayStructure((byte *)(uint32_t) &action, sizeof(action));
     displayStructure((byte *)(uint32_t) &ePID, sizeof(ePID));
+    displayStructure((byte *)(uint32_t) &eMX, sizeof(eMX));
   }
   digitalWrite(waitPin, HIGH);
   digitalWrite(waitLED, HIGH);
@@ -551,7 +845,7 @@ void saveStructures(void)
     Serial.println(EEPROMchipAddr, HEX);
   }
   eepromSpace += eeResult;
-  EEPROMactionAddr = (eeResult + EEPROMchipAddr + 0x10) & 0xFFFF0;
+  EEPROMactionAddr = eeResult + EEPROMchipAddr + 0x01;
   if((setDebug & eepromDebug) || (setDebug & allDebug))
   {
     Serial.print(F("EEPROMactionAddr = 0x"));
@@ -566,7 +860,7 @@ void saveStructures(void)
     Serial.print(F(" bytes to address Ox"));
     Serial.println(EEPROMactionAddr, HEX);
   }
-  EEPROMpidAddr =  (EEPROMactionAddr + eeResult + 0x10) & 0xFFFF0;
+  EEPROMpidAddr =  EEPROMactionAddr + eeResult + 0x01;
   if((setDebug & eepromDebug) || (setDebug & allDebug))
   {
     Serial.print(F("EEPROMpidAddr = 0x"));
@@ -580,6 +874,21 @@ void saveStructures(void)
     Serial.print(eeResult);
     Serial.print(F(" bytes to address Ox"));
     Serial.println(EEPROMpidAddr, HEX);
+  }
+  EEPROMtcAddr =  EEPROMpidAddr + eeResult + 0x01;
+  if((setDebug & eepromDebug) || (setDebug & allDebug))
+  {
+    Serial.print(F("EEPROMtcAddr = 0x"));
+    Serial.println(EEPROMtcAddr, HEX);
+  }
+  eeResult = EEPROM_writeAnything(EEPROMtcAddr, eMX);
+  eepromSpace += eeResult;
+  if((setDebug & eepromDebug) || (setDebug & allDebug))
+  {
+    Serial.print(F("Wrote "));
+    Serial.print(eeResult);
+    Serial.print(F(" bytes to address Ox"));
+    Serial.println(EEPROMtcAddr, HEX);
     Serial.print(F("saveStructures() EEPROM Data Write of "));
     Serial.print(eepromSpace);
     Serial.println(F(" bytes Completed - Displaying chip Structures"));
@@ -588,6 +897,8 @@ void saveStructures(void)
     displayStructure((byte *)(uint32_t) &action, sizeof(action));
     Serial.println(F(" bytes Completed - Displaying PID Structures"));
     displayStructure((byte *)(uint32_t) &ePID, sizeof(ePID));
+    Serial.println(F(" bytes Completed - Displaying TC Structures"));
+    displayStructure((byte *)(uint32_t) &eMX, sizeof(eMX));
     Serial.println(F("Exiting saveStructures"));
   }
   digitalWrite(waitPin, HIGH);
@@ -866,15 +1177,6 @@ void softSerialProcess()
     } 
     break;
     
-    case getAllChips: // "9"
-    {
-      for(x = 0; x < maxChips; x++)
-      {
-        showChipInfo(x);
-      }
-    }
-    break;
-    
     case getChipCount: // "3"
     {
       Serial1.print(chipCnt);
@@ -889,53 +1191,23 @@ void softSerialProcess()
       break;
     }
     
-    case getAllStatus: // "7"
-    {
-      for(int x = 0; x < maxChips; x++)
-      {
-        switch (chip[x].chipAddr[0])
-        {
-          case ds18b20ID:
-          {
-            Serial1.print((int) chip[x].chipStatus);
-          }
-          break;
-          
-          case ds2406ID:
-          {
-              Serial1.print((char) chip[x].chipStatus);
-          }
-          break;
-          
-          default:
-          {
-            Serial1.print(F("Z"));
-          }
-          break;
-        }
-        if(x < maxChips -1)
-        {
-          Serial1.print(F(","));
-        }
-      }
-    Serial1.print(F("\n"));
-    }
-    break;
-
-    case getChipType: // "8"
+    case getChipStatus: // "5"
     {
       x = atoi((char *) &softSerialBuffer[1]);
+      updateChipStatus(x);
       switch(chip[x].chipAddr[0])
       {
         case ds18b20ID:
+        case ds2762ID:
+        case dsT31855ID:
         {
-          Serial1.print(F("T"));
+          Serial1.print( (int) chip[x].chipStatus);
         }
         break;
- 
-         case ds2406ID:
+
+        case ds2406ID:
         {
-          Serial1.print(F("S"));
+          Serial1.print( (char) chip[x].chipStatus);
         }
         break;
 
@@ -944,10 +1216,8 @@ void softSerialProcess()
           Serial1.print(F("Z"));
         }
         break;
-     }
+      }
     }
-    Serial1.print(F("\n"));
-    break;
 
     case setSwitchState: // "6"
     {
@@ -971,21 +1241,77 @@ void softSerialProcess()
     }
     break;
     
-    case getChipStatus: // "5"
+    case getAllStatus: // "7"
+    {
+      for(int x = 0; x < maxChips; x++)
+      {
+        switch (chip[x].chipAddr[0])
+        {
+          case ds18b20ID:
+          case ds2762ID:
+          case dsT31855ID:
+          {
+            Serial1.print((int) chip[x].chipStatus);
+          }
+          break;
+          
+          case ds2406ID:
+          {
+              Serial1.print((char) chip[x].chipStatus);
+          }
+          break;
+          
+          default:
+          {
+            Serial1.print(F("Z"));
+          }
+          break;
+        }
+        if(x < maxChips -1)
+        {
+          Serial1.print(F(","));
+        }
+      }
+      for( x = 0; x < maxMX; x++)
+      {
+        if(eMX[x].mxEnabled == TRUE)
+        {
+          Serial1.print(F(","));
+          Serial1.print(eMX[x].mxTemp,0);
+        }else{
+          Serial1.print(F(",X"));
+        }
+      }
+    Serial1.print(F("\n"));
+    }
+    break;
+
+    case getChipType: // "8"
     {
       x = atoi((char *) &softSerialBuffer[1]);
-      updateChipStatus(x);
       switch(chip[x].chipAddr[0])
       {
-        case ds18b20ID:
+        case ds18b20ID: // DS18B20 Digital Thermometer
         {
-          Serial1.print( (int) chip[x].chipStatus);
+          Serial1.print(F("T"));
+        }
+        break;
+ 
+        case ds2406ID:// DS2406+ Digital Switch
+        {
+          Serial1.print(F("S"));
         }
         break;
 
-        case ds2406ID:
+        case ds2762ID:// DS2762 Thermocouple Sensor
         {
-          Serial1.print( (char) chip[x].chipStatus);
+          Serial1.print(F("C"));
+        }
+        break;
+        
+        case dsT31855ID:
+        {
+          Serial1.print(F("K"));
         }
         break;
 
@@ -994,9 +1320,23 @@ void softSerialProcess()
           Serial1.print(F("Z"));
         }
         break;
+     }
+    }
+    Serial1.print(F("\n"));
+    break;
+
+    case getAllChips: // "9"
+    {
+      for(x = 0; x < maxChips; x++)
+      {
+        if(chip[x].chipAddr[0] != 0x00)
+        {
+          showChipInfo(x);
+        }
       }
     }
-
+    break;
+    
     case getActionArray: // "A"
     {
       x = atoi((char *) &softSerialBuffer[1]);
@@ -1787,6 +2127,14 @@ void softSerialProcess()
       break;
     }
     
+    case readMX: // "R"
+    {
+      x = atoi((char *) &softSerialBuffer[1]);
+      Serial1.print(eMX[x].mxTemp);
+      Serial1.print(F("\n\0"));
+      break;
+    }
+    
      case versionID: // "z"
     {
       Serial1.println(versionStr);
@@ -2071,10 +2419,7 @@ void updateChipStatus(int x)
         ds.write(0x44,1);         // start conversion, with parasite power on at the end
         chip[x].tempTimer = millis();
       }
-/*    
-      delay(125);     // for 9 bit accuracy
-      // we might do a ds.depower() here, but the reset will take care of it.
-*/    
+      
       if((chip[x].tempTimer != 0) && (millis() >= chip[x].tempTimer + tempReadDelay))
       {
         ds.reset();
@@ -2090,11 +2435,47 @@ void updateChipStatus(int x)
   
       // convert the data to actual temperature
         unsigned int raw = (chipBuffer[1] << 8) | chipBuffer[0];
-        if( showCelcius == TRUE)
+        if( showCelsius == TRUE)
         {
           chip[x].chipStatus = (int) ((float)raw / 16.0);
         }else{
           chip[x].chipStatus = (int) ((((float)raw / 16.0) * 1.8) + 31.0);
+        }
+        chip[x].tempTimer = 0;
+      }
+    }
+    break;
+    
+    case dsT31855ID:
+    {
+      if(chip[x].tempTimer == 0)
+      {
+        ds.reset();
+        ds.select(chip[x].chipAddr);
+        ds.write(0x44);         // start conversion, with parasite power on at the end
+        chip[x].tempTimer = millis();
+      }
+      
+      if((chip[x].tempTimer != 0) && (millis() >= chip[x].tempTimer + tempReadDelay))
+      {
+        ds.reset();
+        ds.select(chip[x].chipAddr);    
+        ds.write(0xBE);         // Read Scratchpad
+  
+        for (int i = 0; i < 9; i++) 
+        {
+          chipBuffer[i] = ds.read();
+        }
+        
+        if(ds.crc8(chipBuffer, 8) != chipBuffer[8]) break; // CRC invalid, try later
+  
+      // convert the data to actual temperature
+        int16_t raw = (chipBuffer[1] << 8) | chipBuffer[0];
+        if( showCelsius == TRUE)
+        {
+          chip[x].chipStatus = (int16_t) ((float)raw * 0.25);
+        }else{
+          chip[x].chipStatus = (int16_t) ((((float)raw * 0.25) * 1.8) + 31.0);
         }
         chip[x].tempTimer = 0;
       }
@@ -2161,6 +2542,80 @@ void updateChipStatus(int x)
     }
     break;
     
+    case ds2762ID:
+    {
+      if(millis() >= chip[x].tempTimer + ds2762UpdateTime)
+      {
+        if((setDebug & ds2762Debug) || (setDebug & allDebug))
+        {
+          startTime = millis();
+          Serial.println(F("Enter Read DS2762 Lookup"));
+        }
+        Read_TC_Volts(x);
+        Read_CJ_Temp(x);
+        cjComp = pgm_read_word_near(kTable + cjTemperature);
+        if((setDebug & ds2762Debug) || (setDebug & allDebug))
+        {
+          Serial.print(F("kTable["));
+          Serial.print(cjTemperature);
+          Serial.print(F("] = "));
+          Serial.println(pgm_read_word_near(kTable + cjTemperature));
+        }
+        if(sign == 1)
+        {
+          if(tcVoltage < cjComp)
+          {
+            cjComp -= tcVoltage;
+          }else{
+            cjComp = 0;
+          }
+        }else{
+          cjComp += tcVoltage;
+        }
+        if((setDebug & ds2762Debug) || (setDebug & allDebug))
+        {
+          Serial.print(F("cjComp = "));
+          Serial.print(cjComp);
+          Serial.println(F(" microvolts"));
+        }
+        tblHi = kTableCnt - 1;
+        TC_Lookup();
+        if(error == 0)
+        {
+          if((setDebug & ds2762Debug) || (setDebug & allDebug))
+          {
+            Serial.print(F("Temp = "));
+            Serial.print(eePntr);
+            Serial.print(F(" degrees C, "));
+            Serial.print(((eePntr * 9) / 5) + 32);
+            Serial.println(F(" degrees F"));
+          }
+          if(showCelsius == TRUE)
+          {
+            chip[x].chipStatus = eePntr;
+          }else{
+            chip[x].chipStatus = ((eePntr * 9) / 5) + 32;
+          }
+        }else{
+          if((setDebug & ds2762Debug) || (setDebug & allDebug))
+          {
+            Serial.println(F("Value Out Of Range"));
+          }
+        }
+        if((setDebug & ds2762Debug) || (setDebug & allDebug))
+        {
+          endTime = millis();
+          Serial.print(F("Exit Read DS2762 Lookup - "));
+          Serial.print(endTime - startTime);
+          Serial.println(F(" milliseconds"));
+          Serial.println();
+          Serial.println();
+        }
+        chip[x].tempTimer = millis() + tempReadDelay;
+      }
+    }
+    break;
+    
     default:
     {
       chip[x].chipStatus = noChipPresent;
@@ -2184,6 +2639,23 @@ void updateActions(uint8_t x)
   
   if(action[x].actionEnabled == TRUE)
   {
+    if(action[x].tempPtr->chipStatus <= action[x].tooCold)
+    {
+      if((setDebug & serial1Debug) || (setDebug & allDebug))
+      {
+        Serial.println(F(" - TOO COLD"));
+      }
+    }else if(action[x].tempPtr->chipStatus >= action[x].tooHot){
+      if((setDebug & serial1Debug) || (setDebug & allDebug))
+      {
+        Serial.println(F(" - TOO HOT"));
+      }
+    }else{
+      if((setDebug & serial1Debug) || (setDebug & allDebug))
+      {
+        Serial.println(F(" - JUST RIGHT"));
+      }
+    }
     if(action[x].tempPtr->chipStatus <= action[x].tooCold &&
        action[x].tcPtr->chipStatus == switchStatusOFF) // too cold
     {
@@ -2191,10 +2663,6 @@ void updateActions(uint8_t x)
       {
         actionSwitchSet((uint8_t *) &action[x].tcPtr->chipAddr, ds2406PIOAon);
         
-        if((setDebug & serial1Debug) || (setDebug & allDebug))
-        {
-          Serial.println(F(" - TOO COLD"));
-        }
       }
     }else if(action[x].tempPtr->chipStatus > action[x].tooCold &&
              action[x].tcPtr->chipStatus == switchStatusON){
@@ -2202,11 +2670,6 @@ void updateActions(uint8_t x)
       actionSwitchSet((uint8_t *) &action[x].tcPtr->chipAddr, ds2406PIOAoff);
       action[x].tcMillis = millis();
        
-      if((setDebug & serial1Debug) || (setDebug & allDebug))
-      {
-        Serial.println(F(" - NOT TOO COLD"));
-      }
-      
     }
 
     if(action[x].tempPtr->chipStatus >= action[x].tooHot &&
@@ -2216,11 +2679,6 @@ void updateActions(uint8_t x)
       {
         actionSwitchSet((uint8_t *) &action[x].thPtr->chipAddr, ds2406PIOAon);
         
-        if((setDebug & serial1Debug) || (setDebug & allDebug))
-        {
-          Serial.println(F(" - TOO HOT"));
-        }
-  
       }
     }else if(action[x].tempPtr->chipStatus < action[x].tooHot &&
              action[x].thPtr->chipStatus == switchStatusON){
@@ -2228,11 +2686,6 @@ void updateActions(uint8_t x)
       actionSwitchSet((uint8_t *) &action[x].thPtr->chipAddr, ds2406PIOAoff);
       action[x].thMillis = millis();
                
-      if((setDebug & serial1Debug) || (setDebug & allDebug))
-      {
-        Serial.println(F(" - NOT TOO HOT"));
-      }
-  
     }
   }else{
 
@@ -2245,3 +2698,212 @@ void updateActions(uint8_t x)
   digitalWrite(waitPin, HIGH);
   digitalWrite(waitLED, HIGH);
 }
+
+void updateMX(uint8_t mxCnt)
+{
+  if((setDebug & tcProbeDebug) || (setDebug & allDebug))
+  {
+    startTime = millis();
+    Serial.println(F("updateMX enter"));
+  }
+  if(eMX[mxCnt].mxEnabled == TRUE)
+  {
+    eMX[mxCnt].mxTemp = mxArrayPtr[mxCnt]->readFarenheit();
+    if((setDebug & tcProbeDebug) || (setDebug & allDebug))
+    {
+      Serial.print(F("eMX["));
+      Serial.print(mxCnt);
+      Serial.print(F("].mxtemp = "));
+      if(!isnan(eMX[mxCnt].mxTemp))
+      {
+        Serial.println(eMX[mxCnt].mxTemp);
+      }else{
+        Serial.println(F("NaN"));
+      }
+    }  
+  }
+  if((setDebug & tcProbeDebug) || (setDebug & allDebug))
+  {
+    endTime = millis();
+    Serial.print(F("updateMX exit - "));
+    Serial.print(endTime - startTime);
+    Serial.println(F(" milliseconds"));
+    Serial.println();
+    Serial.println();
+  }
+}
+
+void Read_TC_Volts(uint8_t x)
+{ 
+  if((setDebug & ds2762Debug) || (setDebug & allDebug))
+  {
+    Serial.println(F("Enter Read_TC_Volts"));
+  }
+  ds.reset();
+  ds.select(chip[x].chipAddr);
+  ds.write(0x69); //read voltage
+  ds.write(0x0e);
+  for (i = 0; i < 2; i++)
+  {
+    voltage[i] = ds.read();
+    if((setDebug & ds2762Debug) || (setDebug & allDebug))
+    {
+      Serial.print(F("voltage["));
+      Serial.print(i);
+      Serial.print(F("] = 0x"));
+      if(voltage[i] < 0x10){Serial.print(F("0"));}
+      Serial.print(voltage[i], HEX);
+      Serial.print(F(" "));
+    }
+  }
+  if((setDebug & ds2762Debug) || (setDebug & allDebug))
+  {
+    Serial.println();
+  }
+  ds.reset();
+  tcVoltage = (voltage[0] << 8) + voltage[1];
+  tcVoltage >>= 3; 
+  if((voltage[0] & 0x80) == 0x80)
+  {
+    sign = 1;
+    tcVoltage |= 0xF000;
+    tcVoltage = ~tcVoltage;
+    tcVoltage += 1;
+  }else{
+    sign = 0;
+  }
+  tcBuff = tcVoltage * 15;
+  tcVoltage *= 5;
+  tcVoltage >>= 3;
+  tcVoltage += tcBuff;
+  
+  if((setDebug & ds2762Debug) || (setDebug & allDebug))
+  {
+    Serial.print(F("tcVoltage = "));
+    Serial.print(tcVoltage);
+    Serial.println(F(" microvolts"));
+    Serial.println(F("Exit Read_TC_Volts"));
+  }
+} 
+
+/* Reads cold junction (device) temperature 
+-- each raw bit = 0.125 degrees C 
+-- returns tmpCJ in whole degrees C */ 
+void Read_CJ_Temp(uint8_t x)
+{ 
+  if((setDebug & ds2762Debug) || (setDebug & allDebug))
+  {
+    Serial.println(F("Enter Read_CJ_Temp"));
+  }
+  ds.reset();
+  ds.select(chip[x].chipAddr);
+  ds.write(0x69);
+  ds.write(0x18); //read cjTemp
+  for (i = 0; i < 2; i++)
+  {
+    cjTemp[i] = ds.read();
+    if((setDebug & ds2762Debug) || (setDebug & allDebug))
+    {
+      Serial.print(F("cjTemp["));
+      Serial.print(i);
+      Serial.print(F("] = 0x"));
+      if(cjTemp[i] < 0x10){Serial.print(F("0"));}
+      Serial.print(cjTemp[i], HEX);
+      Serial.print(F(" "));
+    }
+  }
+  if((setDebug & ds2762Debug) || (setDebug & allDebug))
+  {
+    Serial.println();
+  }
+  ds.reset();
+  cjTemperature = (cjTemp[0] << 8) + cjTemp[1];
+  if(cjTemperature>=0x8000)
+  { 
+    cjTemperature = 0;
+//    cjdTemperature = 0.0; // disallow negative 
+  }else{
+//    cjdTemperature =  (double) ((double) cjTemperature) * .125;
+    cjTemperature >>= 8;
+  } 
+  if((setDebug & ds2762Debug) || (setDebug & allDebug))
+  {
+    Serial.print(F("cjTemperature = "));
+    Serial.print(cjTemperature);
+    Serial.print(F(" degrees C, "));
+    Serial.print(((cjTemperature * 9) / 5) + 32);
+    Serial.println(F(" degrees F")); 
+    Serial.println(F("Exit Read_CJ_Temp"));
+  }
+} 
+
+/* Search currently selected TC table for nearest entry 
+-- uses modified binary algorithm to find cjComp 
+-- high end of search set before calling (tblHi) 
+-- successful search sets tempC */ 
+void TC_Lookup(void)
+{ 
+  if((setDebug & ds2762Debug) || (setDebug & allDebug))
+  {
+    Serial.println(F("Enter TC_Lookup"));
+  }
+  tblLo=0; // low entry of table 
+  tempC=22; // default to room temp
+  testVal=pgm_read_word_near(kTable + tblHi); // check max temp
+  if(cjComp>testVal)
+  { 
+    error=1; // out of range 
+  }else{ 
+    while(1)
+    { 
+      eePntr=(tblLo+tblHi)/2; // midpoint of search span 
+      testVal=pgm_read_word_near(kTable + eePntr); // read value from midpoint
+      if((setDebug & ds2762Debug) || (setDebug & allDebug))
+      {
+        Serial.print(F("testVal = "));
+        Serial.print(testVal);
+      }
+      if(cjComp == testVal)
+      {
+        if((setDebug & ds2762Debug) || (setDebug & allDebug))
+        {
+          Serial.println(F(" - TC_Lookup Temp Match"));
+        }
+        tempC = eePntr;
+        return; // found it! 
+      }else{
+        if(cjComp<testVal)
+        {
+          if((setDebug & ds2762Debug) || (setDebug & allDebug))
+          {
+             Serial.println(F(" - testVal too BIG"));
+          }
+         tblHi=eePntr;
+        }else{
+          if((setDebug & ds2762Debug) || (setDebug & allDebug))
+          {
+             Serial.println(F(" - testVal too small"));
+          }
+         tblLo=eePntr;
+        } // search upper half
+      }
+      if((setDebug & ds2762Debug) || (setDebug & allDebug))
+      {
+        Serial.print(F("tblHi = "));
+        Serial.print(tblHi);
+        Serial.print(F(", tblLo = "));
+        Serial.println(tblLo);
+      }
+      if((tblHi-tblLo)<2)
+      { // span at minimum 
+        if((setDebug & ds2762Debug) || (setDebug & allDebug))
+        {
+          Serial.println(F("TC_Lookup Temp Span At Minimum"));
+        }
+        eePntr=tblLo; 
+        return; 
+      } 
+    } 
+  }
+} 
+
