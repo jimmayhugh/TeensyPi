@@ -108,7 +108,10 @@
                 }else{
                   $chipName = "";
                 }
-                if($chipAddressArray[0] == "0x28")
+                if( ($chipAddressArray[0] == "0x28") || 
+                    ($chipAddressArray[0] == "0x30") || 
+                    ($chipAddressArray[0] == "0xAA")
+                  )
                 {
                   $tempAddrStr .=  "  <tr>
                           <td align=\"center\">

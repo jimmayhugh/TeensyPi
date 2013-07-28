@@ -1,6 +1,7 @@
 <?php
   include_once('/var/www/htdocs/PHP_GnuPlot.php'); 
   include_once("/var/www/htdocs/accessDatabase.php");
+  set_time_limit(0);
   $hotTest = "";
   $coldTest = "";
   $pTemp = new GNUPlot();

@@ -198,9 +198,16 @@ select[type='text'] { font-size: 18px; text-align: center;}
                 $chipArray = explode(" ", $out);
                 $chipAddressArray = explode(",", $chipArray[0]);
                 
-                if(($chipAddressArray[0] === "0x28") || ($chipAddressArray[0] === "0x12"))
+                if(($chipAddressArray[0] === "0x30") ||
+                	 ($chipAddressArray[0] === "0x28") ||
+                	 ($chipAddressArray[0] === "0x12") ||
+                	 ($chipAddressArray[0] === "0xAA")
+                	)
                 {
-                  if($chipAddressArray[0] === "0x28")
+                  if( ($chipAddressArray[0] === "0x30") || 
+                      ($chipAddressArray[0] === "0x28") ||
+                	    ($chipAddressArray[0] === "0xAA")
+                    )
                   {
                     $tempQueryStr = "select * from chipNames where address='".$chipArray[0]."'";
                     $tempQueryResult = mysqli_query($link, $tempQueryStr);
@@ -282,7 +289,10 @@ select[type='text'] { font-size: 18px; text-align: center;}
               }
               echo "      </td></tr>";
               $tempAddrArray = explode(",", $actionArray[1]);
-              if($tempAddrArray[0] === "0x28")
+              if( ($tempAddrArray[0] === "0x30") ||
+                  ($tempAddrArray[0] === "0x28") ||
+                  ($tempAddrArray[0] === "0xAA")
+                )
               {
                 $tempAddrQueryStr = "select * from chipNames where address='".$actionArray[1]."'";
                 $tempAddrQueryResult = mysqli_query($link, $tempAddrQueryStr);
